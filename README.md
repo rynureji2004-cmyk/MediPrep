@@ -140,9 +140,9 @@ The seed database includes pre-configured demo users for demonstration and testi
 
 | Role | Username | Default Password | Access / Dashboard |
 | :--- | :--- | :--- | :--- |
-| **Administrator** | `admin_priya` | `Password123!` | User management, doctor profiles, procedure templates |
-| **Surgeon / Doctor** | `doctor_robert` | `Password123!` | Surgical schedule, patient readiness scores, clearance |
-| **Patient** | `patient_john` | `Password123!` | Personal checklist, pre-op instructions, vital uploads |
+| **Administrator** | `admin_clara` | `password123!` | User management, doctor profiles, procedure templates |
+| **Surgeon / Doctor** | `doctor_robert` | `password123!` | Surgical schedule, patient readiness scores, clearance |
+| **Patient** | `patient_john` | `password123!` | Personal checklist, pre-op instructions, vital uploads |
 
 *(Note: In a production deployment, all default demo credentials must be updated.)*
 
