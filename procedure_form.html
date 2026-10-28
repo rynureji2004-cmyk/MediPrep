@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}{{ action }} Procedure Template - Admin Console{% endblock %}
+
+{% block extra_css %}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            
+            <div class="form-card">
+                <div class="form-header">
+                    <h3 class="mb-1 fw-bold"><i class="bi bi-journal-medical me-2"></i>{{ action }} Procedure Catalog Definition</h3>
+                    <p class="text-white-50 small mb-0">Define CPT billing codes, surgery template naming, and duration metrics.</p>
+                </div>
+                
+                <div class="p-4 p-md-5">
+                    <form action="{% if action == 'Add' %}{{ url_for('admin.add_procedure') }}{% else %}{{ url_for('admin.edit_procedure', id=id) }}{% endif %}" method="POST" class="needs-validation" novalidate>
+                        
+                        <!-- Catalog Specifications Section -->
+                        <h5 class="text-secondary border-bottom pb-2 mb-3">Template Metrics</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label for="code" class="form-label small fw-semibold">CPT Code / ID</label>
+                                <input type="text" class="form-control" id="code" name="code" placeholder="e.g. CPT-99214" value="{{ proc.code or '' }}" required>
+                                <div class="invalid-feedback">CPT Billing code is required.</div>
+                            </div>
+                            <div class="col-md-8">
+                                <label for="name" class="form-label small fw-semibold">Procedure Name</label>
+                                <input type="text" class="form-control" id="name" name="name" placeholder="e.g. Left Heart Catheterization" value="{{ proc.name or '' }}" required>
+                                <div class="invalid-feedback">Procedure name is required.</div>
+                            </div>
+                        </div>
+
+                        <!-- Categorization Section -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="category" class="form-label small fw-semibold">Specialty Category</label>
+                                <input type="text" class="form-control" id="category" name="category" placeholder="e.g. Cardiology, Orthopedics" value="{{ proc.category or '' }}" required>
+                                <div class="invalid-feedback">Specialty category is required.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="est_duration_mins" class="form-label small fw-semibold">Estimated Duration (Minutes)</label>
+                                <input type="number" class="form-control" id="est_duration_mins" name="est_duration_mins" min="5" max="480" value="{{ proc.est_duration_mins or 60 }}" required>
+                                <div class="invalid-feedback">Please input a valid duration (5 - 480 mins).</div>
+                            </div>
+                        </div>
+
+                        <!-- Description Section -->
+                        <div class="row g-3 mb-5">
+                            <div class="col-12">
+                                <label for="description" class="form-label small fw-semibold">Clinical Description / Guidelines Summary</label>
+                                <textarea class="form-control" id="description" name="description" rows="4" placeholder="Brief outline of the clinical procedure scope and requirements...">{{ proc.description or '' }}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{{ url_for('admin.procedures') }}" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+                            <button type="submit" class="btn btn-info text-white rounded-pill px-4 shadow-sm">Save Catalog Item</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Enable Bootstrap front-end form validation
+    (() => {
+      'use strict'
+      const forms = document.querySelectorAll('.needs-validation')
+      Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+          if (!form.checkValidity()) {
+            event.preventDefault()
+            event.stopPropagation()
+          }
+          form.classList.add('was-validated')
+        }, false)
+      })
+    })()
+</script>
+{% endblock %}

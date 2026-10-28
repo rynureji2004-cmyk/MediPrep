@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - MediPrep Readiness{% endblock %}
+
+{% block extra_css %}
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    
+    <!-- User Profile Hero Widget -->
+    <div class="dashboard-hero d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h1 class="h2 mb-1">Welcome, {{ session.get('first_name') }} {{ session.get('last_name') }}</h1>
+            <p class="text-secondary small mb-0">Role Classification: <span class="badge bg-primary text-uppercase">{{ session.get('role_name') }}</span></p>
+        </div>
+        <div>
+            <span class="text-secondary small d-block">Log in Account: <strong>{{ session.get('username') }}</strong></span>
+            <span class="text-secondary small d-block">Secure Email: <strong>{{ session.get('email') }}</strong></span>
+        </div>
+    </div>
+    
+    <!-- Role Specific Dashboard Content Panels -->
+    <div class="row g-4">
+        
+        <!-- Column 1: Info and General Controls -->
+        <div class="col-lg-4">
+            <div class="card status-card p-4 h-100">
+                <h5 class="card-title text-secondary border-bottom pb-2 mb-3">System Actions</h5>
+                <p class="small text-muted">You are currently logged into the secure clinical readiness portal. Your actions are recorded in the system audit logs.</p>
+                <div class="d-grid gap-2">
+                    {% if session.get('role_name') == 'patient' %}
+                        <a href="{{ url_for('patient.checklist') }}" class="btn btn-primary text-white">Open Prep Checklist</a>
+                    {% elif session.get('role_name') in ['doctor', 'admin'] %}
+                        <a href="#" class="btn btn-primary text-white">Refresh Worklist Dashboard</a>
+                    {% endif %}
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger">Disconnect Session</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Column 2: Specific Views -->
+        <div class="col-lg-8">
+            <div class="card status-card p-4 h-100">
+                <h5 class="card-title text-secondary border-bottom pb-2 mb-3">Active Workspace ({{ session.get('role_name')|upper }})</h5>
+                
+                {% if session.get('role_name') == 'patient' %}
+                    <div class="alert alert-info">
+                        <h6>Scheduled Surgery Target:</h6>
+                        <p class="mb-0 small">Please open the "Prep Checklist" to verify your preoperative fasting status and upload required reports.</p>
+                    </div>
+                {% elif session.get('role_name') == 'doctor' %}
+                    <div class="alert alert-warning">
+                        <h6>Physician Worklist Panel:</h6>
+                        <p class="mb-0 small">Review readiness assessments, schedule new operating procedures, and issue clinical instructions.</p>
+                    </div>
+                {% elif session.get('role_name') == 'admin' %}
+                    <div class="alert alert-danger">
+                        <h6>System Control Console:</h6>
+                        <p class="mb-0 small">Admin controls: manage user accounts, modify master checklists, and inspect audits.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% endblock %}

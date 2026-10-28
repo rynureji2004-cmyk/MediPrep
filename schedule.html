@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Scheduled Procedures - MediPrep Readiness{% endblock %}
+
+{% block extra_css %}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    
+    <!-- Title Area -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h1 class="h2 mb-1 fw-bold text-dark"><i class="bi bi-calendar-event text-primary me-2"></i>Scheduled Procedures Worklist</h1>
+            <p class="text-secondary small mb-0">Search, monitor compliance, and manage pre-operative patient schedules.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('doctor.add_schedule') }}" class="btn btn-primary text-white rounded-pill px-4 shadow-sm">
+                <i class="bi bi-plus-circle me-1"></i>Schedule New Procedure
+            </a>
+            <a href="{{ url_for('doctor.dashboard') }}" class="btn btn-outline-secondary rounded-pill px-3">
+                <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+    
+    <!-- Search Bar Card -->
+    <div class="card search-card hover-card p-3 mb-4 bg-white">
+        <form action="{{ url_for('doctor.schedules') }}" method="GET" class="row g-2">
+            <div class="col-md-9 col-sm-8">
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent border-end-0 text-secondary"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control border-start-0 py-2.5" id="search" name="search" placeholder="Search by Patient Name or Procedure Type..." value="{{ search }}">
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-4 d-grid gap-2 d-md-flex">
+                <button type="submit" class="btn btn-primary text-white px-4 rounded-pill flex-grow-1">Search</button>
+                {% if search %}
+                    <a href="{{ url_for('doctor.schedules') }}" class="btn btn-outline-secondary px-3 rounded-pill">Clear</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+    
+    <!-- Results Table -->
+    <div class="card search-card hover-card p-4 bg-white">
+        {% if not schedules %}
+            <div class="text-center py-5">
+                <i class="bi bi-folder-x fs-1 text-secondary mb-2 d-block"></i>
+                <p class="text-muted mb-0">No scheduled procedures found matching query.</p>
+            </div>
+        {% else %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="py-3">Patient Name</th>
+                            <th class="py-3">Procedure Category</th>
+                            <th class="py-3">Procedure Name</th>
+                            <th class="py-3">Scheduled Date & Time</th>
+                            <th class="py-3">Location</th>
+                            <th class="py-3">Status</th>
+                            <th class="py-3 text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in schedules %}
+                            <tr>
+                                <td class="py-3">
+                                    <div class="fw-bold text-dark">{{ s.patient_first_name }} {{ s.patient_last_name }}</div>
+                                    <div class="text-muted small">{{ s.patient_email }}</div>
+                                </td>
+                                <td class="py-3">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle text-uppercase">{{ s.procedure_code }}</span>
+                                </td>
+                                <td class="py-3">
+                                    <div class="fw-semibold small text-secondary">{{ s.procedure_name }}</div>
+                                </td>
+                                <td class="py-3 small text-dark-emphasis">{{ s.formatted_scheduled_at or s.scheduled_at }}</td>
+                                <td class="py-3 small text-secondary">
+                                    {% if s.procedure_room and s.preparation_room %}
+                                        <div class="fw-semibold text-dark"><i class="bi bi-hospital me-1 text-primary"></i>{{ s.procedure_room }}</div>
+                                        <div class="text-muted smaller"><i class="bi bi-door-open me-1"></i>Prep: {{ s.preparation_room }}</div>
+                                    {% elif s.procedure_room %}
+                                        <div class="fw-semibold text-dark"><i class="bi bi-hospital me-1 text-primary"></i>{{ s.procedure_room }}</div>
+                                    {% elif s.location %}
+                                        <div class="fw-semibold text-dark">{{ s.location }}</div>
+                                    {% else %}
+                                        <span class="text-muted">Unassigned</span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-3">
+                                    {% if s.status == 'scheduled' %}
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle text-uppercase">Scheduled</span>
+                                    {% elif s.status == 'completed' %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle text-uppercase">Completed</span>
+                                    {% elif s.status == 'cancelled' %}
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle text-uppercase">Cancelled</span>
+                                    {% else %}
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle text-uppercase">{{ s.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-3 text-end">
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('doctor.edit_schedule', schedule_id=s.id) }}" class="btn btn-sm btn-outline-primary px-3 rounded-start-pill">
+                                            <i class="bi bi-pencil-square me-1"></i>Edit
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger px-3 rounded-end-pill" onclick="confirmDelete('{{ s.id }}', '{{ s.patient_first_name }} {{ s.patient_last_name }}')">
+                                            <i class="bi bi-trash-fill"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Cancel Schedule Modal Form -->
+<form id="deleteForm" method="POST" style="display:none;">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function confirmDelete(id, patientName) {
+        if (confirm(`Are you sure you want to cancel the scheduled procedure for ${patientName}? This will delete all generated checklists.`)) {
+            const form = document.getElementById('deleteForm');
+            form.action = `/doctor/schedules/delete/${id}`;
+            form.submit();
+        }
+    }
+</script>
+{% endblock %}

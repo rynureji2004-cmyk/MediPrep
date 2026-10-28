@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}System-Generated Informed Consent | MediPrep{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="mb-4">
+        <a href="{{ url_for('patient.dashboard') }}" class="text-decoration-none text-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to Patient Dashboard
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="card-header bg-primary text-white py-3 px-4 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-file-earmark-check-fill me-2"></i>Official Informed Consent Record</h5>
+                    <span class="badge bg-white text-primary fw-bold px-3 py-1.5 rounded-pill">Version {{ consent.version }}</span>
+                </div>
+                <div class="card-body p-4">
+
+                    {% if consent and consent.status in ['confirmed_locked', 'verified'] %}
+                        <div class="alert alert-success border-0 rounded-3 mb-4 d-flex align-items-center gap-2">
+                            <i class="bi bi-shield-check-fill fs-4 text-success"></i>
+                            <div>
+                                <strong>Consent Confirmed & Locked:</strong> Electronic signature confirmed on {{ consent.confirmed_at }}.
+                                {% if consent.status == 'verified' %}
+                                    <span class="badge bg-success ms-2"><i class="bi bi-check-all me-1"></i>Verified by Attending Surgeon</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning border-0 rounded-3 mb-4 d-flex align-items-center gap-2">
+                            <i class="bi bi-exclamation-circle-fill fs-4 text-warning"></i>
+                            <div>
+                                <strong>Confirmation Required:</strong> Please review the system-generated consent document below and confirm your authorization using your authenticated login session.
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Consent Document Box -->
+                    <div class="p-4 bg-light rounded-4 border mb-4 font-monospace text-dark" style="white-space: pre-wrap; font-size: 0.95rem; line-height: 1.6;">
+{{ consent.consent_text }}
+                    </div>
+
+                    {% if consent and consent.status == 'generated' %}
+                        <form action="{{ url_for('patient.consent_view', schedule_id=schedule.id) }}" method="POST">
+                            <div class="form-check mb-4">
+                                <input class="form-check-input" type="checkbox" id="agree_consent" required>
+                                <label class="form-check-label fw-bold text-dark" for="agree_consent">
+                                    I have read and fully understand the procedure details and consent statement above.
+                                </label>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 w-100 shadow-sm">
+                                <i class="bi bi-pen-fill me-2"></i>Electronically Sign & Confirm Consent (Locks Record)
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,487 @@
+{% extends "base.html" %}
+
+{% block title %}{{ action }} Scheduled Procedure - MediPrep Readiness{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-xl-10">
+            
+            <div class="card border-0 shadow-sm bg-white" style="border-radius: 16px; overflow: hidden;">
+                <!-- Form Header Banner -->
+                <div class="form-header bg-primary text-white p-4">
+                    <h3 class="mb-1 fw-bold"><i class="bi bi-calendar-plus me-2"></i>{{ action }} Scheduled Procedure</h3>
+                    <p class="text-white-50 small mb-0">Define procedure metrics, verify official lab reports, and manage preparation checklists.</p>
+                </div>
+                
+                <!-- Form Body -->
+                <div class="p-4 p-md-5">
+                    
+                    <form action="{% if action == 'Add' %}{{ url_for('doctor.add_schedule') }}{% else %}{{ url_for('doctor.edit_schedule', schedule_id=schedule.id) }}{% endif %}" method="POST" id="schedule_form" class="needs-validation" novalidate>
+                        
+                        <input type="hidden" name="checklist_json" id="checklist_json">
+
+                        <div class="row g-4">
+                            <!-- Patient Selection -->
+                            <div class="col-md-6">
+                                <label for="patient_id" class="form-label small fw-semibold text-dark">Patient Account <span class="text-danger">*</span></label>
+                                <select class="form-select" id="patient_id" name="patient_id" required {% if action == 'Edit' %}disabled{% endif %}>
+                                    <option value="" disabled {% if not schedule and not patient_id %}selected{% endif %}>-- Select Patient --</option>
+                                    {% for p in patients %}
+                                        <option value="{{ p.id }}" {% if (schedule and schedule.patient_id == p.id) or (patient_id and patient_id == p.id) %}selected{% endif %}>
+                                            {{ p.first_name }} {{ p.last_name }} ({{ p.email }})
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% if action == 'Edit' %}
+                                    <input type="hidden" name="patient_id" value="{{ schedule.patient_id }}">
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Procedure Selection -->
+                            <div class="col-md-6">
+                                <label for="procedure_id" class="form-label small fw-semibold text-dark">Procedure Type <span class="text-danger">*</span></label>
+                                <select class="form-select" id="procedure_id" name="procedure_id" required {% if action == 'Edit' %}disabled{% endif %} onchange="if(typeof loadChecklistTemplates === 'function'){ loadChecklistTemplates(this.value); } updateRoomOptions(true);">
+                                    {% if procedures and procedures|length > 0 %}
+                                        <option value="" disabled {% if not schedule and not procedure_id %}selected{% endif %}>-- Select Procedure Type --</option>
+                                        {% for pr in procedures %}
+                                            <option value="{{ pr.id }}" {% if (schedule and schedule.procedure_id == pr.id) or (procedure_id and procedure_id == pr.id) %}selected{% endif %}>
+                                                [{{ pr.code }}] {{ pr.name }}
+                                            </option>
+                                        {% endfor %}
+                                    {% else %}
+                                        <option value="" disabled selected>No procedures are currently available for your registered specialty.</option>
+                                    {% endif %}
+                                </select>
+                                {% if action == 'Edit' %}
+                                    <input type="hidden" name="procedure_id" value="{{ schedule.procedure_id }}">
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Scheduled Date and Time -->
+                            <div class="col-md-6">
+                                <label for="scheduled_at" class="form-label small fw-semibold text-dark">Scheduled Date & Time <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0 text-primary" style="cursor: pointer;" id="btn_toggle_calendar"><i class="bi bi-calendar-event"></i></span>
+                                    <input type="text" class="form-control border-start-0 bg-white" id="scheduled_at" name="scheduled_at" value="{% if schedule and schedule.html_scheduled_at %}{{ schedule.html_scheduled_at }}{% elif scheduled_at %}{{ scheduled_at }}{% endif %}" placeholder="Select Date & Time (e.g. 04-11-2026 10:00 AM)" required readonly>
+                                </div>
+                                <div class="form-text text-muted small">Select date and 12-hour time (AM/PM).</div>
+                            </div>
+                            
+                            <!-- Preparation Room -->
+                            <div class="col-md-6">
+                                <label for="preparation_room" class="form-label small fw-semibold text-dark">Preparation Room <span class="text-danger">*</span></label>
+                                <select class="form-select" id="preparation_room" name="preparation_room" required>
+                                    <option value="" disabled {% if not (schedule and schedule.preparation_room) and not preparation_room %}selected{% endif %}>-- Select Preparation Room --</option>
+                                    {% for room in preparation_rooms or [] %}
+                                        <option value="{{ room }}" {% if (schedule and schedule.preparation_room == room) or (preparation_room == room) %}selected{% endif %}>{{ room }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <!-- Procedure / Scanning Room -->
+                            <div class="col-md-6">
+                                <label for="procedure_room" class="form-label small fw-semibold text-dark">Procedure / Scanning Room <span class="text-danger">*</span></label>
+                                <select class="form-select" id="procedure_room" name="procedure_room" required>
+                                    <option value="" disabled {% if not (schedule and (schedule.procedure_room or schedule.location)) and not procedure_room %}selected{% endif %}>-- Select Procedure / Scanning Room --</option>
+                                    {% for room in procedure_scanning_rooms or [] %}
+                                        <option value="{{ room }}" {% if (schedule and (schedule.procedure_room == room or schedule.location == room)) or (procedure_room == room) %}selected{% endif %}>{{ room }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <!-- Edit Mode Fields -->
+                            {% if action == 'Edit' %}
+                                <div class="col-12 mt-4 border-top pt-4">
+                                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-shield-check text-primary me-2"></i>Medical Sign-off & Guidelines</h5>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label for="readiness_notes" class="form-label small fw-semibold text-dark">General Readiness Comments</label>
+                                            <textarea class="form-control" id="readiness_notes" name="readiness_notes" rows="3" placeholder="e.g. Patient blood counts verified and stable. Fasting protocol completed.">{{ schedule.readiness_notes or '' }}</textarea>
+                                        </div>
+                                        
+                                        <div class="col-12 mt-3">
+                                            <label for="procedure_guidelines" class="form-label small fw-semibold text-dark">Pre-op Guidelines & Instructions (One per line)</label>
+                                            <textarea class="form-control" id="procedure_guidelines" name="procedure_guidelines" rows="5" placeholder="Enter instructions, one per line...">{{ procedure_guidelines_text or '' }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Active Preoperative Preparation Status (Edit Mode only) -->
+                        {% if action == 'Edit' and current_items %}
+                            <div class="mt-5 p-4 rounded-4 border bg-light">
+                                <h5 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-heart-pulse-fill text-primary me-2"></i>Active Checklist Status & Clinical Verifications</h5>
+                                
+                                <div class="table-responsive bg-white rounded-3 border mb-4">
+                                    <table class="table align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Task Requirement</th>
+                                                <th>Due Date</th>
+                                                <th>Type</th>
+                                                <th>Status</th>
+                                                <th class="text-end">Verification Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in current_items %}
+                                                <tr>
+                                                    <td>
+                                                        <div class="fw-bold text-dark">
+                                                            {{ item.task_name }}
+                                                            {% if item.is_critical %}
+                                                                <span class="badge bg-danger ms-1 small">CRITICAL</span>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="small text-secondary">{{ item.description }}</div>
+                                                        
+                                                        {% if item.task_type == 'document_upload' and item.file_name %}
+                                                            <div class="mt-2 p-2 bg-light rounded border small text-start">
+                                                                <div><strong>Source:</strong> {% if item.report_lab_type == 'external' %}<span class="badge bg-purple-subtle text-purple border" style="background-color:#f3e8ff;color:#7e22ce;">External Laboratory</span>{% else %}<span class="badge bg-info-subtle text-info border">Hospital Laboratory</span>{% endif %}</div>
+                                                                <div><strong>Laboratory:</strong> <span class="text-primary fw-bold">{{ item.report_lab_name }}</span></div>
+                                                                {% if item.uploader_first_name %}
+                                                                    <div><strong>Uploaded By:</strong> {% if item.uploader_role_name == 'doctor' %}Dr. {{ item.uploader_first_name }} {{ item.uploader_last_name }}{% else %}Hospital Lab Technician ({{ item.uploader_first_name }} {{ item.uploader_last_name }}){% endif %}</div>
+                                                                {% endif %}
+                                                                {% if item.external_report_id %}
+                                                                    <div><strong>Report ID:</strong> <span class="badge bg-light text-dark border">{{ item.external_report_id }}</span></div>
+                                                                {% endif %}
+                                                                {% if item.report_date %}
+                                                                    <div><strong>Report Date:</strong> {{ item.report_date }}</div>
+                                                                {% endif %}
+                                                                <div><strong>Uploaded At:</strong> {{ item.report_uploaded_at }}</div>
+                                                            </div>
+                                                        {% elif item.is_external %}
+                                                            <div class="mt-1"><span class="badge bg-warning-subtle text-dark border">External Investigation (Patient to bring report)</span></div>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="small text-secondary">{{ item.due_by_datetime }}</td>
+                                                    <td class="small text-capitalize text-secondary">{{ item.task_type.replace('_', ' ') }}</td>
+                                                    <td>
+                                                        {% if item.report_verification_status == 'verified' or item.status == 'verified' %}
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle text-uppercase fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Verified</span>
+                                                        {% elif item.report_verification_status in ['needs_review', 'needs_clarification'] %}
+                                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle text-uppercase fw-semibold"><i class="bi bi-exclamation-triangle-fill me-1"></i>Needs Clarification</span>
+                                                        {% elif item.report_verification_status == 'external_received' %}
+                                                            <span class="badge bg-info-subtle text-info border border-info-subtle text-uppercase fw-semibold"><i class="bi bi-inbox-fill me-1"></i>External Report – Received</span>
+                                                        {% elif item.file_name or item.status == 'completed' %}
+                                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle text-uppercase fw-semibold"><i class="bi bi-clock-history me-1"></i>Pending Doctor Review</span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle text-uppercase fw-semibold">Pending Upload</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="text-end">
+                                                        <div class="d-flex flex-column align-items-end gap-1">
+                                                            {% if item.task_type == 'document_upload' and item.file_name %}
+                                                                <a href="{{ url_for('doctor.view_uploaded_report', filename=item.file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary px-3 py-1 rounded-pill mb-1">
+                                                                    <i class="bi bi-file-earmark-pdf me-1"></i>View Report
+                                                                </a>
+                                                                
+                                                                {% if item.report_verification_status != 'verified' and item.status != 'verified' %}
+                                                                    <div class="d-flex gap-1">
+                                                                        <form action="{{ url_for('doctor.update_report_status', report_id=item.report_id) }}" method="POST" class="m-0">
+                                                                            <input type="hidden" name="status" value="verified">
+                                                                            <button type="submit" class="btn btn-sm btn-success text-white px-3 py-1 rounded-pill"><i class="bi bi-check-circle me-1"></i>Verify</button>
+                                                                        </form>
+                                                                        
+                                                                        <button type="button" class="btn btn-sm btn-outline-danger px-2 py-1 rounded-pill" data-bs-toggle="collapse" data-bs-target="#rejectForm_{{ item.id }}">
+                                                                            Needs Clarification
+                                                                        </button>
+                                                                    </div>
+                                                                    <div class="collapse mt-2 text-start w-100" id="rejectForm_{{ item.id }}">
+                                                                        <form action="{{ url_for('doctor.reject_report', report_id=item.report_id) }}" method="POST" class="p-2 border rounded bg-white">
+                                                                            <textarea name="rejection_reason" class="form-control form-control-sm mb-2" rows="2" placeholder="Specify required clarification..." required></textarea>
+                                                                            <button type="submit" class="btn btn-sm btn-danger w-100 rounded-pill">Submit Clarification Request</button>
+                                                                        </form>
+                                                                    </div>
+                                                                {% else %}
+                                                                    <span class="text-success small fw-bold"><i class="bi bi-check-circle-fill me-1"></i>VERIFIED BY DOCTOR</span>
+                                                                {% endif %}
+                                                            {% elif item.task_type == 'document_upload' %}
+                                                                <!-- Button to trigger Upload External Report Modal -->
+                                                                <button type="button" class="btn btn-sm btn-primary text-white px-3 py-1 rounded-pill" data-bs-toggle="modal" data-bs-target="#modalUploadExternal_{{ item.id }}">
+                                                                    <i class="bi bi-upload me-1"></i>Upload External Report
+                                                                </button>
+                                                            {% elif item.status == 'completed' %}
+                                                                <form action="{{ url_for('doctor.verify_item', schedule_id=schedule.id, item_id=item.id) }}" method="POST" class="m-0">
+                                                                    <button type="submit" class="btn btn-sm btn-success text-white px-3 py-1 rounded-pill">VERIFY TASK</button>
+                                                                </form>
+                                                            {% elif item.status == 'verified' %}
+                                                                <span class="text-success small fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Signed Off</span>
+                                                            {% else %}
+                                                                <span class="text-secondary small italic">Awaiting Upload</span>
+                                                            {% endif %}
+
+                                                            {% if item.task_type == 'document_upload' %}
+                                                                <!-- Modal for Doctor External Report Upload -->
+                                                                <div class="modal fade text-start" id="modalUploadExternal_{{ item.id }}" tabindex="-1" aria-labelledby="modalLabel_{{ item.id }}" aria-hidden="true">
+                                                                    <div class="modal-dialog modal-dialog-centered">
+                                                                        <div class="modal-content rounded-4 border-0 shadow">
+                                                                            <form action="{{ url_for('doctor.upload_external_report', schedule_id=schedule.id) }}" method="POST" enctype="multipart/form-data">
+                                                                                <input type="hidden" name="checklist_item_id" value="{{ item.id }}">
+                                                                                <div class="modal-header bg-primary text-white rounded-top-4">
+                                                                                    <h5 class="modal-title fw-bold" id="modalLabel_{{ item.id }}"><i class="bi bi-file-earmark-arrow-up me-2"></i>Upload External Laboratory Report</h5>
+                                                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                                </div>
+                                                                                <div class="modal-body p-4">
+                                                                                    <div class="alert alert-info py-2 px-3 small mb-3">
+                                                                                        <i class="bi bi-info-circle-fill me-1"></i> Log external report received from patient for test: <strong>{{ item.task_name }}</strong>
+                                                                                    </div>
+                                                                                    <div class="mb-3">
+                                                                                        <label class="form-label small fw-semibold text-dark">Laboratory Name *</label>
+                                                                                        <input type="text" name="lab_name" class="form-control" placeholder="e.g. ABC Diagnostics" required>
+                                                                                    </div>
+                                                                                    <div class="row g-2 mb-3">
+                                                                                        <div class="col-md-6">
+                                                                                            <label class="form-label small fw-semibold text-dark">Lab Report ID / Ref No.</label>
+                                                                                            <input type="text" name="external_report_id" class="form-control" placeholder="e.g. LAB-2026-45821">
+                                                                                        </div>
+                                                                                        <div class="col-md-6">
+                                                                                            <label class="form-label small fw-semibold text-dark">Report Date</label>
+                                                                                            <input type="date" name="report_date" class="form-control">
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div class="mb-3">
+                                                                                        <label class="form-label small fw-semibold text-dark">Report File (PDF/Image) *</label>
+                                                                                        <input type="file" name="report_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" required>
+                                                                                    </div>
+                                                                                    <div class="mb-3">
+                                                                                        <label class="form-label small fw-semibold text-dark">Initial Report Status</label>
+                                                                                        <select name="verification_status" class="form-select">
+                                                                                            <option value="external_received" selected>External Report – Received</option>
+                                                                                            <option value="verified">Verified / Accepted</option>
+                                                                                            <option value="needs_clarification">Needs Clarification</option>
+                                                                                        </select>
+                                                                                    </div>
+                                                                                    <div class="mb-3">
+                                                                                        <label class="form-label small fw-semibold text-dark">Optional Doctor Notes</label>
+                                                                                        <textarea name="notes" class="form-control" rows="2" placeholder="e.g. Received official printed report from patient John Doe."></textarea>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="modal-footer bg-light rounded-bottom-4">
+                                                                                    <button type="button" class="btn btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                                                                                    <button type="submit" class="btn btn-primary text-white rounded-pill px-4">Upload External Report</button>
+                                                                                </div>
+                                                                            </form>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            {% endif %}
+
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Submit Buttons -->
+                        <div class="d-flex gap-2 mt-5 justify-content-end">
+                            <a href="{{ url_for('doctor.schedules') }}" class="btn btn-outline-secondary px-4 py-2 rounded-pill">Cancel</a>
+                            <button type="submit" class="btn btn-primary text-white px-4 py-2 rounded-pill fw-semibold shadow-sm">Save Schedule</button>
+                        </div>
+                        
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+const PROCEDURE_ROOMS = {{ procedure_rooms | tojson | safe }};
+const ALL_PREP_ROOMS = {{ (preparation_rooms or []) | tojson | safe }};
+const ALL_PROC_ROOMS = {{ (procedure_scanning_rooms or []) | tojson | safe }};
+const initialPrepRoom = "{% if schedule and schedule.preparation_room %}{{ schedule.preparation_room }}{% elif preparation_room %}{{ preparation_room }}{% endif %}";
+const initialProcRoom = "{% if schedule and schedule.procedure_room %}{{ schedule.procedure_room }}{% elif procedure_room %}{{ procedure_room }}{% elif schedule %}{{ schedule.location }}{% endif %}";
+
+function updateRoomOptions(isUserChange = false) {
+    const procSelect = document.getElementById('procedure_id');
+    const prepSelect = document.getElementById('preparation_room');
+    const procRoomSelect = document.getElementById('procedure_room');
+
+    if (!prepSelect || !procRoomSelect) return;
+
+    const procId = procSelect ? procSelect.value : null;
+    
+    // Save current choices if loading initial page state; reset if user changed procedure
+    const currentPrepVal = isUserChange ? "" : (prepSelect.value || initialPrepRoom);
+    const currentProcVal = isUserChange ? "" : (procRoomSelect.value || initialProcRoom);
+
+    // If procedure is selected, use procedure-specific rooms; otherwise show all available rooms
+    let availablePrep = (procId && PROCEDURE_ROOMS[procId] && PROCEDURE_ROOMS[procId].preparation && PROCEDURE_ROOMS[procId].preparation.length > 0)
+        ? PROCEDURE_ROOMS[procId].preparation
+        : (ALL_PREP_ROOMS || []);
+    let availableProc = (procId && PROCEDURE_ROOMS[procId] && PROCEDURE_ROOMS[procId].procedure && PROCEDURE_ROOMS[procId].procedure.length > 0)
+        ? PROCEDURE_ROOMS[procId].procedure
+        : (ALL_PROC_ROOMS || []);
+
+    // Rebuild prep dropdown
+    prepSelect.innerHTML = '<option value="" disabled' + (!currentPrepVal ? ' selected' : '') + '>-- Select Preparation Room --</option>';
+    availablePrep.forEach(room => {
+        const opt = document.createElement('option');
+        opt.value = room;
+        opt.textContent = room;
+        if (room === currentPrepVal) {
+            opt.selected = true;
+        }
+        prepSelect.appendChild(opt);
+    });
+
+    // Rebuild proc dropdown
+    procRoomSelect.innerHTML = '<option value="" disabled' + (!currentProcVal ? ' selected' : '') + '>-- Select Procedure / Scanning Room --</option>';
+    availableProc.forEach(room => {
+        const opt = document.createElement('option');
+        opt.value = room;
+        opt.textContent = room;
+        if (room === currentProcVal) {
+            opt.selected = true;
+        }
+        procRoomSelect.appendChild(opt);
+    });
+}
+
+function formatDDMMYYYY_12H(date) {
+    if (!date || isNaN(date.getTime())) return "";
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const strHours = String(hours).padStart(2, '0');
+    return `${day}-${month}-${year} ${strHours}:${minutes} ${ampm}`;
+}
+
+function parseDDMMYYYY_12H(dateStr) {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+    const match = dateStr.trim().match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})\s+(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM|am|pm)$/i);
+    if (match) {
+        const day = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10) - 1;
+        const year = parseInt(match[3], 10);
+        let hour = parseInt(match[4], 10);
+        const minute = parseInt(match[5], 10);
+        const ampm = match[6].toUpperCase();
+        if (ampm === 'PM' && hour < 12) hour += 12;
+        if (ampm === 'AM' && hour === 12) hour = 0;
+        const d = new Date(year, month, day, hour, minute, 0);
+        if (!isNaN(d.getTime())) return d;
+    }
+    return null;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const inputElem = document.getElementById('scheduled_at');
+    let lastTimeObj = { hour: 10, minute: 0, ampm: 'AM' };
+
+    if (inputElem && inputElem.value) {
+        const parsedInitial = parseDDMMYYYY_12H(inputElem.value);
+        if (parsedInitial) {
+            let h = parsedInitial.getHours();
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12 || 12;
+            lastTimeObj = { hour: h, minute: parsedInitial.getMinutes(), ampm: ampm };
+        }
+    }
+
+    const minAdvanceDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    const fp = flatpickr("#scheduled_at", {
+        enableTime: true,
+        dateFormat: "d-m-Y h:i K",
+        time_24hr: false,
+        minuteIncrement: 5,
+        allowInput: false,
+        allowInvalidPreload: true,
+        // Enforce 24-hour advance scheduling by disabling past and near dates
+        // without restricting the month selector dropdown or future navigation
+        disable: [
+            function(date) {
+                // In Add mode, all dates earlier than 24 hours from now are disabled
+                {% if action == 'Add' %}
+                return date < minAdvanceDate;
+                {% else %}
+                return false;
+                {% endif %}
+            }
+        ],
+        defaultDate: (inputElem && inputElem.value) ? (parseDDMMYYYY_12H(inputElem.value) || inputElem.value) : null,
+        formatDate: function(date, formatStr) {
+            return formatDDMMYYYY_12H(date);
+        },
+        parseDate: function(dateStr, formatStr) {
+            return parseDDMMYYYY_12H(dateStr) || flatpickr.parseDate(dateStr, formatStr);
+        },
+        onOpen: function(selectedDates, dateStr, instance) {
+            if (instance.selectedDates.length > 0) {
+                const dt = instance.selectedDates[0];
+                let h = dt.getHours();
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12 || 12;
+                lastTimeObj = { hour: h, minute: dt.getMinutes(), ampm: ampm };
+            }
+        },
+        onChange: function(selectedDates, dateStr, instance) {
+            if (!selectedDates || selectedDates.length === 0) return;
+            const d = selectedDates[0];
+            
+            // Enforce 24 hours in advance on date selection in Add mode
+            {% if action == 'Add' %}
+            if (d < minAdvanceDate) {
+                alert("Procedures must be scheduled at least 24 hours in advance.");
+                instance.clear();
+                return;
+            }
+            {% endif %}
+            
+            // Preserve time: read from time picker elements if available, otherwise from lastTimeObj
+            if (instance.hourElement && instance.minuteElement && instance.amPM) {
+                let h = parseInt(instance.hourElement.value, 10) || lastTimeObj.hour;
+                let m = parseInt(instance.minuteElement.value, 10);
+                if (isNaN(m)) m = lastTimeObj.minute;
+                let ampm = instance.amPM.textContent.trim().toUpperCase() || lastTimeObj.ampm;
+                lastTimeObj = { hour: h, minute: m, ampm: ampm };
+                
+                let fullH = h % 12;
+                if (ampm === 'PM') fullH += 12;
+                d.setHours(fullH, m, 0, 0);
+            } else {
+                let fullH = lastTimeObj.hour % 12;
+                if (lastTimeObj.ampm === 'PM') fullH += 12;
+                d.setHours(fullH, lastTimeObj.minute, 0, 0);
+            }
+
+            const formatted = formatDDMMYYYY_12H(d);
+            instance.input.value = formatted;
+            instance.input.setAttribute('value', formatted);
+            
+            instance.input.dispatchEvent(new Event('input', { bubbles: true }));
+            instance.input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
+
+    const toggleBtn = document.getElementById('btn_toggle_calendar');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', function() {
+            if (fp) fp.open();
+        });
+    }
+
+    updateRoomOptions();
+});
+</script>
+{% endblock %}

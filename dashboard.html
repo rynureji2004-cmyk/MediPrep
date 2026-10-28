@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+
+{% block title %}My Procedure Readiness & Preparation | MediPrep{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- Active Surgery Alert / Redirect if none -->
+    {% if not procedure %}
+        <div class="card border-0 shadow-sm p-5 text-center bg-white" style="border-radius: 16px;">
+            <i class="bi bi-calendar-x text-muted display-4 mb-3 d-block"></i>
+            <h3 class="fw-bold text-dark">No Scheduled Procedures</h3>
+            <p class="text-secondary mb-0">You do not currently have any upcoming medical procedures scheduled in the system.</p>
+        </div>
+    {% else %}
+        
+        <!-- My Procedures Section -->
+        {% if procedures %}
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="fw-bold text-dark mb-0"><i class="bi bi-calendar2-check-fill text-primary me-2"></i>My Procedures</h4>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 rounded-pill small fw-semibold">
+                        {{ procedures|length }} Procedure{% if procedures|length > 1 %}s{% endif %} Scheduled
+                    </span>
+                </div>
+                <div class="row g-3">
+                    {% for p_item in procedures %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100 shadow-sm rounded-4 {% if procedure and procedure.id == p_item.id %}border-2 border-primary bg-primary-subtle{% else %}border-0 bg-white{% endif %}" style="transition: all 0.2s ease;">
+                                <div class="card-body p-3 d-flex flex-column justify-content-between">
+                                    <div>
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <span class="badge bg-primary text-white text-uppercase px-2 py-1 small">{{ p_item.procedure_code or 'CPT Code' }}</span>
+                                            {% if p_item.readiness_status == 'green' %}
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>READY</span>
+                                            {% elif p_item.readiness_status == 'yellow' %}
+                                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle px-2 py-1"><i class="bi bi-clock-history me-1"></i>PENDING</span>
+                                            {% else %}
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>NOT READY</span>
+                                            {% endif %}
+                                        </div>
+                                        <h5 class="fw-bold text-dark mb-1 fs-6">{{ p_item.procedure_name }}</h5>
+                                        <p class="small text-secondary mb-2">
+                                            <i class="bi bi-person-badge me-1"></i>
+                                            {% if p_item.doctor_first_name and p_item.doctor_last_name %}
+                                                Dr. {{ p_item.doctor_first_name }} {{ p_item.doctor_last_name }}
+                                            {% else %}
+                                                Doctor Not Assigned
+                                            {% endif %}
+                                        </p>
+                                        <div class="small text-muted mb-3" style="font-size: 0.8rem;">
+                                            <div><i class="bi bi-calendar3 me-1"></i>Scheduled Date & Time: <strong>{{ p_item.formatted_scheduled_at or p_item.formatted_date }}</strong></div>
+                                            {% if p_item.preparation_room %}
+                                                <div><i class="bi bi-door-open me-1"></i>Preparation Room: <strong>{{ p_item.preparation_room }}</strong></div>
+                                            {% endif %}
+                                            {% if p_item.procedure_room %}
+                                                <div><i class="bi bi-geo-alt me-1"></i>{% if 'MRI' in p_item.procedure_name or 'CT' in p_item.procedure_name %}Scanning Room:{% else %}Procedure Room:{% endif %} <strong>{{ p_item.procedure_room }}</strong></div>
+                                            {% elif p_item.location %}
+                                                <div><i class="bi bi-geo-alt me-1"></i>Location: <strong>{{ p_item.location }}</strong></div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        {% if procedure and procedure.id == p_item.id %}
+                                            <span class="btn btn-sm btn-primary text-white w-100 disabled rounded-pill fw-semibold"><i class="bi bi-eye-fill me-1"></i>Currently Viewing</span>
+                                        {% else %}
+                                            <a href="{{ url_for('patient.dashboard', schedule_id=p_item.id) }}" class="btn btn-sm btn-outline-primary w-100 rounded-pill fw-semibold">View Preparation Details</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Pre-operative Reminders Widget (🔔 Alerts) -->
+        {% if reminders %}
+            <div class="alert alert-warning border border-warning-subtle py-4 px-4 shadow-sm mb-4 rounded-4">
+                <h5 class="alert-heading fw-bold d-flex align-items-center gap-2 mb-2" style="color: var(--warning-text);">
+                    <i class="bi bi-bell-fill"></i> Pre-operative Action Reminders
+                </h5>
+                <ul class="mb-0 ps-3 small fw-semibold" style="color: var(--warning-text);">
+                    {% for r in reminders %}
+                        <li class="mb-2">{{ r }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+        
+        <!-- Header Hero Widget -->
+        <div class="patient-hero d-flex justify-content-between align-items-center flex-wrap gap-4 mb-4 p-4 rounded-4 bg-primary text-white shadow-sm">
+            <div>
+                <span class="badge bg-white text-primary border border-white-50 px-3 py-1.5 rounded-pill mb-2 fw-bold text-uppercase">{{ procedure.procedure_code or 'CPT Code' }}</span>
+                <h1 class="h2 mb-1 fw-bold text-white">{{ procedure.procedure_name or 'Procedure' }}</h1>
+                <p class="text-white-50 small mb-0">
+                    Scheduled Date & Time: <strong>{{ procedure.formatted_scheduled_at or procedure.formatted_date or 'Not Available' }}</strong> 
+                    {% if procedure.preparation_room %}
+                        | Preparation Room: <strong>{{ procedure.preparation_room }}</strong>
+                    {% endif %}
+                    {% if procedure.procedure_room %}
+                        | {% if 'MRI' in procedure.procedure_name or 'CT' in procedure.procedure_name %}Scanning Room:{% else %}Procedure Room:{% endif %} <strong>{{ procedure.procedure_room }}</strong>
+                    {% elif procedure.location %}
+                        | Location: <strong>{{ procedure.location }}</strong>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="text-md-end">
+                <span class="text-white-50 small d-block mb-1">Attending Surgeon:</span>
+                <strong class="h5 text-white fw-bold">
+                    <i class="bi bi-person-badge me-1"></i>
+                    {% if procedure.doctor_first_name and procedure.doctor_last_name %}
+                        Dr. {{ procedure.doctor_first_name }} {{ procedure.doctor_last_name }}
+                    {% else %}
+                        Not Assigned
+                    {% endif %}
+                </strong>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Left Column: Readiness status, checklist, assessment, consent -->
+            <div class="col-lg-8">
+                
+                <!-- Status & Progress Card -->
+                <div class="card dashboard-card p-4 border-0 shadow-sm bg-white mb-4 rounded-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 border-bottom pb-3">
+                        <h5 class="card-title fw-bold text-dark mb-0"><i class="bi bi-shield-check text-primary me-2"></i>Procedure Readiness Evaluation</h5>
+                        <div>
+                            {% if readiness_details and readiness_details.readiness_status == 'green' %}
+                                <span class="badge bg-success px-3 py-2 text-uppercase fw-bold text-white fs-6"><i class="bi bi-check-circle-fill me-1"></i>READY FOR PROCEDURE</span>
+                            {% elif readiness_details and readiness_details.readiness_status == 'yellow' %}
+                                <span class="badge bg-warning text-dark px-3 py-2 text-uppercase fw-bold fs-6"><i class="bi bi-clock-history me-1"></i>PENDING REVIEW</span>
+                            {% else %}
+                                <span class="badge bg-danger px-3 py-2 text-uppercase fw-bold text-white fs-6"><i class="bi bi-exclamation-triangle-fill me-1"></i>NOT READY</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small text-secondary fw-semibold">Overall Readiness Compliance</span>
+                            <span class="small fw-bold text-primary">{{ progress }}% Completed</span>
+                        </div>
+                        <div class="progress" style="height: 12px; border-radius: 8px;">
+                            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ progress }}%;" aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Readiness Reason Breakdown -->
+                    <div class="bg-light p-3 rounded-3 border">
+                        <h6 class="fw-bold text-dark small mb-2"><i class="bi bi-list-stars text-primary me-1"></i>Readiness Factor Breakdown:</h6>
+                        <div class="row g-2 small">
+                            <div class="col-md-6">
+                                {% if assessment and assessment.status == 'submitted_locked' %}
+                                    <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Pre-Procedure Assessment: Complete</span>
+                                {% else %}
+                                    <span class="text-danger"><i class="bi bi-x-circle-fill me-1"></i>Pre-Procedure Assessment: Pending Submission</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {% if consent and consent.status in ['confirmed_locked', 'verified'] %}
+                                    <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Informed Consent: Confirmed & Locked</span>
+                                {% else %}
+                                    <span class="text-danger"><i class="bi bi-x-circle-fill me-1"></i>Informed Consent: Confirmation Pending</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {% if readiness_details and readiness_details.reports_verified %}
+                                    <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Official Reports: All Verified</span>
+                                {% else %}
+                                    <span class="text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i>Official Reports: Pending Verification</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {% if readiness_details and readiness_details.checklist_complete %}
+                                    <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Preparation Checklist: Complete</span>
+                                {% else %}
+                                    <span class="text-warning"><i class="bi bi-hourglass-split me-1"></i>Preparation Checklist: In Progress</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pre-op Assessment & System Consent Action Quick Bar -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100 d-flex flex-row align-items-center justify-content-between">
+                            <div>
+                                <h6 class="fw-bold text-dark mb-1"><i class="bi bi-clipboard2-pulse text-primary me-1"></i>Pre-Op Assessment</h6>
+                                <span class="small text-muted">
+                                    {% if assessment and assessment.status == 'submitted_locked' %}
+                                        <span class="text-success fw-semibold">✓ Submitted & Locked</span>
+                                    {% else %}
+                                        <span class="text-danger fw-semibold">Action Required</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <a href="{{ url_for('patient.assessment_form', schedule_id=procedure.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                {% if assessment and assessment.status == 'submitted_locked' %}View Form{% else %}Complete Form{% endif %}
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100 d-flex flex-row align-items-center justify-content-between">
+                            <div>
+                                <h6 class="fw-bold text-dark mb-1"><i class="bi bi-file-earmark-check text-primary me-1"></i>Informed Consent</h6>
+                                <span class="small text-muted">
+                                    {% if consent and consent.status in ['confirmed_locked', 'verified'] %}
+                                        <span class="text-success fw-semibold">✓ Confirmed & Locked</span>
+                                    {% else %}
+                                        <span class="text-danger fw-semibold">Pending Signature</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <a href="{{ url_for('patient.consent_view', schedule_id=procedure.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                {% if consent and consent.status in ['confirmed_locked', 'verified'] %}View Consent{% else %}Sign Consent{% endif %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compliance Checklist Table -->
+                <div class="card dashboard-card p-4 border-0 shadow-sm bg-white mb-4 rounded-4">
+                    <h5 class="card-title fw-bold text-dark border-bottom pb-3 mb-3"><i class="bi bi-card-checklist text-primary me-2"></i>Preparation Checklist & Official Reports</h5>
+                    
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Task / Investigation</th>
+                                    <th>Due Date</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Official Report</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in checklist %}
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold text-dark">
+                                                {{ item.task_name }}
+                                                {% if item.is_critical %}
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1 small px-2 py-0.5 rounded-pill">CRITICAL</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="small text-secondary mt-1">{{ item.description }}</div>
+                                            
+                                            {% if item.task_type == 'document_upload' and item.file_name %}
+                                                <div class="mt-2 p-2 bg-light rounded border small text-start">
+                                                    <div><strong>Source:</strong> {% if item.report_lab_type == 'external' %}<span class="badge bg-purple-subtle text-purple border" style="background-color:#f3e8ff;color:#7e22ce;">External Laboratory</span>{% else %}<span class="badge bg-info-subtle text-info border">Hospital Laboratory</span>{% endif %}</div>
+                                                    <div><strong>Laboratory:</strong> <span class="text-primary fw-bold">{{ item.report_lab_name }}</span></div>
+                                                    {% if item.uploader_first_name %}
+                                                        <div><strong>Uploaded By:</strong> {% if item.uploader_role_name == 'doctor' %}Dr. {{ item.uploader_first_name }} {{ item.uploader_last_name }}{% else %}Hospital Lab Technician ({{ item.uploader_first_name }} {{ item.uploader_last_name }}){% endif %}</div>
+                                                    {% endif %}
+                                                    {% if item.external_report_id %}
+                                                        <div><strong>Report ID:</strong> <span class="badge bg-light text-dark border">{{ item.external_report_id }}</span></div>
+                                                    {% endif %}
+                                                    {% if item.report_date %}
+                                                        <div><strong>Report Date:</strong> {{ item.report_date }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td class="small text-secondary">{{ item.due_by_datetime }}</td>
+                                        <td class="small text-secondary text-capitalize">{{ item.task_type.replace('_', ' ') }}</td>
+                                        <td>
+                                            {% if item.report_verification_status == 'verified' or item.status == 'verified' %}
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle text-uppercase fw-semibold px-2.5 py-1"><i class="bi bi-check-circle-fill me-1"></i>Verified</span>
+                                            {% elif item.report_verification_status in ['needs_review', 'needs_clarification'] %}
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle text-uppercase fw-semibold px-2.5 py-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Needs Clarification</span>
+                                            {% elif item.report_verification_status == 'external_received' %}
+                                                <span class="badge bg-info-subtle text-info border border-info-subtle text-uppercase fw-semibold px-2.5 py-1"><i class="bi bi-inbox-fill me-1"></i>External Report – Received</span>
+                                            {% elif item.file_name or item.status == 'completed' %}
+                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle text-uppercase fw-semibold px-2.5 py-1"><i class="bi bi-clock-history me-1"></i>Pending Doctor Review</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle text-uppercase fw-semibold px-2.5 py-1">Pending</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if item.task_type == 'document_upload' %}
+                                                {% if item.file_name %}
+                                                    <a href="{{ url_for('patient.view_uploaded_report', filename=item.file_path) }}" target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-3">
+                                                        <i class="bi bi-lock-fill me-1"></i>View Official Report (🔒 Locked)
+                                                    </a>
+                                                {% else %}
+                                                    <span class="badge bg-light text-muted border px-3 py-1">
+                                                        <i class="bi bi-hourglass-split me-1"></i>Awaiting Official Report
+                                                    </span>
+                                                {% endif %}
+                                            {% elif item.task_type == 'patient_action' %}
+                                                {% if item.status == 'pending' %}
+                                                    <form action="{{ url_for('patient.complete_item', item_id=item.id) }}" method="POST">
+                                                        <button type="submit" class="btn btn-sm btn-primary text-white px-3 py-1 rounded-pill">Confirm Task Done</button>
+                                                    </form>
+                                                {% else %}
+                                                    <span class="text-success fw-bold small"><i class="bi bi-check-circle-fill me-1"></i> Confirmed</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted small">Clinical Staff Review</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Log Vitals Form Card -->
+                <div class="card dashboard-card p-4 border-0 shadow-sm bg-white mb-4 rounded-4">
+                    <h5 class="card-title fw-bold text-dark border-bottom pb-3 mb-3"><i class="bi bi-activity text-primary me-2"></i>Record Pre-operative Vitals & Lab Metrics</h5>
+                    <p class="small text-secondary mb-4">Log your latest vitals and lab numbers. The Clinical Safety Rules Engine will evaluate them against preoperative safety thresholds.</p>
+                    
+                    <form action="{{ url_for('patient.record_vitals', schedule_id=procedure.id) }}" method="POST">
+                        <div class="row g-3">
+                            <div class="col-md-4 col-sm-6">
+                                <label for="blood_sugar" class="form-label small fw-semibold text-dark">Blood Sugar (mg/dL)</label>
+                                <input type="number" step="0.1" class="form-control form-control-sm" id="blood_sugar" name="blood_sugar" value="{{ vitals.blood_sugar if vitals and vitals.blood_sugar is not none else '' }}" placeholder="e.g. 110">
+                            </div>
+                            <div class="col-md-4 col-sm-6">
+                                <label for="hemoglobin" class="form-label small fw-semibold text-dark">Hemoglobin (g/dL)</label>
+                                <input type="number" step="0.1" class="form-control form-control-sm" id="hemoglobin" name="hemoglobin" value="{{ vitals.hemoglobin if vitals and vitals.hemoglobin is not none else '' }}" placeholder="e.g. 14">
+                            </div>
+                            <div class="col-md-4 col-sm-6">
+                                <label for="temperature" class="form-label small fw-semibold text-dark">Body Temp (°F)</label>
+                                <input type="number" step="0.1" class="form-control form-control-sm" id="temperature" name="temperature" value="{{ vitals.temperature if vitals and vitals.temperature is not none else '' }}" placeholder="e.g. 98.6">
+                            </div>
+                            <div class="col-md-4 col-sm-6">
+                                <label for="creatinine" class="form-label small fw-semibold text-dark">Creatinine (mg/dL)</label>
+                                <input type="number" step="0.01" class="form-control form-control-sm" id="creatinine" name="creatinine" value="{{ vitals.creatinine if vitals and vitals.creatinine is not none else '' }}" placeholder="e.g. 0.9">
+                            </div>
+                            <div class="col-md-4 col-sm-6">
+                                <label for="systolic_bp" class="form-label small fw-semibold text-dark">BP Systolic (mmHg)</label>
+                                <input type="number" class="form-control form-control-sm" id="systolic_bp" name="systolic_bp" value="{{ vitals.systolic_bp if vitals and vitals.systolic_bp is not none else '' }}" placeholder="e.g. 120">
+                            </div>
+                            <div class="col-md-4 col-sm-6">
+                                <label for="diastolic_bp" class="form-label small fw-semibold text-dark">BP Diastolic (mmHg)</label>
+                                <input type="number" class="form-control form-control-sm" id="diastolic_bp" name="diastolic_bp" value="{{ vitals.diastolic_bp if vitals and vitals.diastolic_bp is not none else '' }}" placeholder="e.g. 80">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end mt-4">
+                            <button type="submit" class="btn btn-sm btn-primary text-white px-4 py-2 rounded-pill shadow-sm">Save Vitals & Run Evaluation</button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Notifications, suggestions, advice -->
+            <div class="col-lg-4">
+                
+                <!-- Clinical Safety Alerts -->
+                {% if vitals_alerts %}
+                    <div class="card dashboard-card p-4 border-0 shadow-sm bg-white mb-4 rounded-4" style="border-left: 4px solid var(--danger-color) !important;">
+                        <h5 class="card-title fw-bold text-danger border-bottom pb-3 mb-3"><i class="bi bi-exclamation-triangle-fill me-2"></i>Clinical Safety Alerts</h5>
+                        <div class="alert alert-danger mb-0 py-3 border-0 bg-danger-subtle bg-opacity-50">
+                            <ul class="mb-0 ps-3 small">
+                                {% for alert in vitals_alerts %}
+                                    <li class="mb-2 fw-semibold text-danger">{{ alert }}</li>
+                                {% endfor %}
+                            </ul>
+                            <div class="small mt-3 text-secondary" style="font-size: 0.75rem; line-height: 1.4;">
+                                * Generated by Clinical Safety Rules Engine. Attending surgeon performs final clinical assessment.
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Clinical Instructions Suggestion Panel -->
+                <div class="card dashboard-card p-4 border-0 shadow-sm bg-white mb-4 rounded-4">
+                    <h5 class="card-title fw-bold text-dark border-bottom pb-3 mb-3"><i class="bi bi-lightbulb-fill text-warning me-2"></i>Preparation Recommendations</h5>
+                    {% if not suggestions %}
+                        <p class="small text-secondary mb-0"><i class="bi bi-info-circle me-1"></i> No custom directives configured for this procedure.</p>
+                    {% else %}
+                        <ul class="list-group list-group-flush small">
+                            {% for sug in suggestions %}
+                                <li class="list-group-item bg-transparent px-0 py-2.5 d-flex gap-2 text-dark align-items-start">
+                                    <i class="bi bi-check-circle text-primary mt-0.5"></i>
+                                    <span>{{ sug }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+
+                <!-- Notifications Message Board -->
+                <div class="card dashboard-card p-4 border-0 shadow-sm bg-white rounded-4">
+                    <h5 class="card-title fw-bold text-dark border-bottom pb-3 mb-3"><i class="bi bi-chat-dots-fill text-primary me-2"></i>Clinical Board Messages</h5>
+                    {% if not notifications %}
+                        <p class="small text-secondary mb-0"><i class="bi bi-info-circle me-1"></i> No new messages.</p>
+                    {% else %}
+                        <div class="list-group list-group-flush">
+                            {% for n in notifications %}
+                                <div class="list-group-item bg-transparent px-0 py-2.5 border-bottom border-light">
+                                    <div class="d-flex justify-content-between align-items-start mb-1 flex-wrap">
+                                        <div>
+                                            <h6 class="mb-0 small fw-bold text-dark">
+                                                {% if n.sender_first_name %}
+                                                    Dr. {{ n.sender_first_name }} {{ n.sender_last_name }}
+                                                {% else %}
+                                                    {{ n.title }}
+                                                {% endif %}
+                                            </h6>
+                                            {% if n.procedure_name %}
+                                                <span class="badge bg-light text-secondary border mt-1" style="font-size: 0.7rem;">Procedure: {{ n.procedure_name }}</span>
+                                            {% endif %}
+                                        </div>
+                                        <span class="text-secondary small" style="font-size: 0.75rem;">
+                                            {% if n.sent_at is string %}
+                                                {{ n.sent_at }}
+                                            {% else %}
+                                                {{ n.sent_at.strftime('%b %d, %I:%M %p') if n.sent_at else '' }}
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <p class="mb-0 small text-secondary mt-1" style="line-height: 1.4;">{{ n.message }}</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+
+    {% endif %}
+</div>
+{% endblock %}

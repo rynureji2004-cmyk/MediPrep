@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block title %}Register Account - MediPrep Readiness{% endblock %}
+
+{% block extra_css %}
+{% endblock %}
+
+{% block content %}
+<div class="register-container">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-md-10">
+                
+                <div class="register-card">
+                    <div class="register-header">
+                        <h2>Create Secure Account</h2>
+                        <p>Hospital Procedure Preparation & Clinical Readiness System</p>
+                    </div>
+                    <div class="register-body">
+                        
+                        <form action="{{ url_for('auth.register') }}" method="POST" class="needs-validation" novalidate>
+                            
+                            <!-- Core Credentials Section -->
+                            <h5 class="text-secondary mb-3 border-bottom pb-2">Account Credentials</h5>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label for="username" class="form-label small fw-semibold">Username</label>
+                                    <input type="text" class="form-control {% if errors and errors.get('username') %}is-invalid{% endif %}" id="username" name="username" value="{{ form_data.get('username', '') if form_data else '' }}" required>
+                                    <div class="invalid-feedback">{% if errors and errors.get('username') %}{{ errors.get('username') }}{% else %}Username is required.{% endif %}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="email" class="form-label small fw-semibold">Email Address</label>
+                                    <input type="email" class="form-control {% if errors and errors.get('email') %}is-invalid{% endif %}" id="email" name="email" value="{{ form_data.get('email', '') if form_data else '' }}" required>
+                                    <div class="invalid-feedback">{% if errors and errors.get('email') %}{{ errors.get('email') }}{% else %}Please enter a valid email address.{% endif %}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="password" class="form-label small fw-semibold">Password</label>
+                                    <input type="password" class="form-control {% if errors and errors.get('password') %}is-invalid{% endif %}" id="password" name="password" minlength="8" required>
+                                    <div class="invalid-feedback">{% if errors and errors.get('password') %}{{ errors.get('password') }}{% else %}Password must contain at least 8 characters.{% endif %}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="confirm_password" class="form-label small fw-semibold">Confirm Password</label>
+                                    <input type="password" class="form-control {% if errors and errors.get('confirm_password') %}is-invalid{% endif %}" id="confirm_password" name="confirm_password" minlength="8" required>
+                                    <div class="invalid-feedback">{% if errors and errors.get('confirm_password') %}{{ errors.get('confirm_password') }}{% else %}Confirm your password.{% endif %}</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Personal Contact Section -->
+                            <h5 class="text-secondary mb-3 border-bottom pb-2">Personal Information</h5>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label for="first_name" class="form-label small fw-semibold">First Name</label>
+                                    <input type="text" class="form-control {% if errors and errors.get('first_name') %}is-invalid{% endif %}" id="first_name" name="first_name" value="{{ form_data.get('first_name', '') if form_data else '' }}" required>
+                                    <div class="invalid-feedback">{% if errors and errors.get('first_name') %}{{ errors.get('first_name') }}{% else %}First name is required.{% endif %}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="last_name" class="form-label small fw-semibold">Last Name</label>
+                                    <input type="text" class="form-control {% if errors and errors.get('last_name') %}is-invalid{% endif %}" id="last_name" name="last_name" value="{{ form_data.get('last_name', '') if form_data else '' }}" required>
+                                    <div class="invalid-feedback">{% if errors and errors.get('last_name') %}{{ errors.get('last_name') }}{% else %}Last name is required.{% endif %}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="phone" class="form-label small fw-semibold">Mobile Number</label>
+                                    <input type="text" class="form-control {% if errors and errors.get('phone') %}is-invalid{% endif %}" id="phone" name="phone" placeholder="9876543210" value="{{ form_data.get('phone', '') if form_data else '' }}">
+                                    <div class="invalid-feedback">{% if errors and errors.get('phone') %}{{ errors.get('phone') }}{% else %}Enter a valid 10-digit Indian mobile number.{% endif %}</div>
+                                    <div class="form-text small text-muted">10-digit Indian mobile number (e.g. 9876543210).</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="role_name" class="form-label small fw-semibold">System Clearance Group</label>
+                                    <select class="form-select" id="role_name" name="role_name" onchange="toggleRoleFields(this.value)" required>
+                                        <option value="patient" {% if not form_data or form_data.get('role_name') == 'patient' %}selected{% endif %}>Patient</option>
+                                        <option value="doctor" {% if form_data and form_data.get('role_name') == 'doctor' %}selected{% endif %}>Doctor / Physician</option>
+                                        <option value="lab_tech" {% if form_data and form_data.get('role_name') == 'lab_tech' %}selected{% endif %}>Hospital Laboratory Technician</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Dynamic Role Section: DOCTOR -->
+                            <div id="doctor_fields" class="role-section">
+                                <h5 class="text-primary mb-3">Clinical Practitioner Credentials</h5>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label for="license_number" class="form-label small fw-semibold">Medical License Code</label>
+                                        <input type="text" class="form-control doctor-req {% if errors and errors.get('license_number') %}is-invalid{% endif %}" id="license_number" name="license_number" value="{{ form_data.get('license_number', '') if form_data else '' }}">
+                                        <div class="invalid-feedback">{% if errors and errors.get('license_number') %}{{ errors.get('license_number') }}{% else %}Medical License code is required.{% endif %}</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="specialty" class="form-label small fw-semibold">Specialization Area</label>
+                                        <select class="form-select doctor-req {% if errors and errors.get('specialty') %}is-invalid{% endif %}" id="specialty" name="specialty" onchange="handleSpecialtyChange(this.value)">
+                                            <option value="" {% if not form_data or not form_data.get('specialty') %}selected{% endif %}>Select Specialization</option>
+                                            <option value="Cardiology" {% if form_data and form_data.get('specialty') == 'Cardiology' %}selected{% endif %}>Cardiology</option>
+                                            <option value="Neurology" {% if form_data and form_data.get('specialty') == 'Neurology' %}selected{% endif %}>Neurology</option>
+                                            <option value="Orthopedics" {% if form_data and form_data.get('specialty') == 'Orthopedics' %}selected{% endif %}>Orthopedics</option>
+                                            <option value="Gastroenterology" {% if form_data and form_data.get('specialty') == 'Gastroenterology' %}selected{% endif %}>Gastroenterology</option>
+                                            <option value="General Medicine" {% if form_data and form_data.get('specialty') == 'General Medicine' %}selected{% endif %}>General Medicine</option>
+                                            <option value="General Surgery" {% if form_data and form_data.get('specialty') == 'General Surgery' %}selected{% endif %}>General Surgery</option>
+                                            <option value="Pulmonology" {% if form_data and form_data.get('specialty') == 'Pulmonology' %}selected{% endif %}>Pulmonology</option>
+                                            <option value="Nephrology" {% if form_data and form_data.get('specialty') == 'Nephrology' %}selected{% endif %}>Nephrology</option>
+                                            <option value="Urology" {% if form_data and form_data.get('specialty') == 'Urology' %}selected{% endif %}>Urology</option>
+                                            <option value="Dermatology" {% if form_data and form_data.get('specialty') == 'Dermatology' %}selected{% endif %}>Dermatology</option>
+                                            <option value="Pediatrics" {% if form_data and form_data.get('specialty') == 'Pediatrics' %}selected{% endif %}>Pediatrics</option>
+                                            <option value="Obstetrics & Gynecology" {% if form_data and form_data.get('specialty') == 'Obstetrics & Gynecology' %}selected{% endif %}>Obstetrics & Gynecology</option>
+                                            <option value="Oncology" {% if form_data and form_data.get('specialty') == 'Oncology' %}selected{% endif %}>Oncology</option>
+                                            <option value="Radiology" {% if form_data and form_data.get('specialty') == 'Radiology' %}selected{% endif %}>Radiology</option>
+                                            <option value="Anesthesiology" {% if form_data and form_data.get('specialty') == 'Anesthesiology' %}selected{% endif %}>Anesthesiology</option>
+                                        </select>
+                                        <div class="invalid-feedback">{% if errors and errors.get('specialty') %}{{ errors.get('specialty') }}{% else %}Please select a specialization.{% endif %}</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="department" class="form-label small fw-semibold">Medical Department</label>
+                                        <select class="form-select doctor-req {% if errors and errors.get('department') %}is-invalid{% endif %}" id="department" name="department" onchange="handleDepartmentChange(this.value)">
+                                            <option value="" {% if not form_data or not form_data.get('department') %}selected{% endif %}>Select Medical Department</option>
+                                            <option value="Cardiology Department" {% if form_data and form_data.get('department') == 'Cardiology Department' %}selected{% endif %}>Cardiology Department</option>
+                                            <option value="Neurology Department" {% if form_data and form_data.get('department') == 'Neurology Department' %}selected{% endif %}>Neurology Department</option>
+                                            <option value="Orthopedics Department" {% if form_data and form_data.get('department') == 'Orthopedics Department' %}selected{% endif %}>Orthopedics Department</option>
+                                            <option value="Gastroenterology Department" {% if form_data and form_data.get('department') == 'Gastroenterology Department' %}selected{% endif %}>Gastroenterology Department</option>
+                                            <option value="General Medicine Department" {% if form_data and form_data.get('department') == 'General Medicine Department' %}selected{% endif %}>General Medicine Department</option>
+                                            <option value="General Surgery Department" {% if form_data and form_data.get('department') == 'General Surgery Department' %}selected{% endif %}>General Surgery Department</option>
+                                            <option value="Pulmonology Department" {% if form_data and form_data.get('department') == 'Pulmonology Department' %}selected{% endif %}>Pulmonology Department</option>
+                                            <option value="Nephrology Department" {% if form_data and form_data.get('department') == 'Nephrology Department' %}selected{% endif %}>Nephrology Department</option>
+                                            <option value="Urology Department" {% if form_data and form_data.get('department') == 'Urology Department' %}selected{% endif %}>Urology Department</option>
+                                            <option value="Dermatology Department" {% if form_data and form_data.get('department') == 'Dermatology Department' %}selected{% endif %}>Dermatology Department</option>
+                                            <option value="Pediatrics Department" {% if form_data and form_data.get('department') == 'Pediatrics Department' %}selected{% endif %}>Pediatrics Department</option>
+                                            <option value="Obstetrics & Gynecology Department" {% if form_data and form_data.get('department') == 'Obstetrics & Gynecology Department' %}selected{% endif %}>Obstetrics & Gynecology Department</option>
+                                            <option value="Oncology Department" {% if form_data and form_data.get('department') == 'Oncology Department' %}selected{% endif %}>Oncology Department</option>
+                                            <option value="Radiology Department" {% if form_data and form_data.get('department') == 'Radiology Department' %}selected{% endif %}>Radiology Department</option>
+                                            <option value="Anesthesiology Department" {% if form_data and form_data.get('department') == 'Anesthesiology Department' %}selected{% endif %}>Anesthesiology Department</option>
+                                        </select>
+                                        <div class="invalid-feedback">{% if errors and errors.get('department') %}{{ errors.get('department') }}{% else %}Please select a medical department.{% endif %}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Dynamic Role Section: PATIENT -->
+                            <div id="patient_fields" class="role-section active">
+                                <h5 class="text-primary mb-3">Patient Clinical Profile</h5>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label for="date_of_birth" class="form-label small fw-semibold">Date of Birth</label>
+                                        <input type="date" class="form-control patient-req {% if errors and errors.get('date_of_birth') %}is-invalid{% endif %}" id="date_of_birth" name="date_of_birth" value="{{ form_data.get('date_of_birth', '') if form_data else '' }}" required>
+                                        <div class="invalid-feedback" id="dob_feedback">{% if errors and errors.get('date_of_birth') %}{{ errors.get('date_of_birth') }}{% else %}Date of birth is required.{% endif %}</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="gender" class="form-label small fw-semibold">Gender</label>
+                                        <select class="form-select" id="gender" name="gender">
+                                            <option value="male" {% if form_data and form_data.get('gender') == 'male' %}selected{% endif %}>Male</option>
+                                            <option value="female" {% if form_data and form_data.get('gender') == 'female' %}selected{% endif %}>Female</option>
+                                            <option value="other" {% if not form_data or form_data.get('gender') == 'other' %}selected{% endif %}>Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="blood_type" class="form-label small fw-semibold">Blood Group</label>
+                                        <select class="form-select {% if errors and errors.get('blood_type') %}is-invalid{% endif %}" id="blood_type" name="blood_type">
+                                            <option value="" {% if not form_data or not form_data.get('blood_type') %}selected{% endif %}>Select Blood Group</option>
+                                            <option value="A+" {% if form_data and form_data.get('blood_type') == 'A+' %}selected{% endif %}>A+</option>
+                                            <option value="A-" {% if form_data and form_data.get('blood_type') == 'A-' %}selected{% endif %}>A-</option>
+                                            <option value="B+" {% if form_data and form_data.get('blood_type') == 'B+' %}selected{% endif %}>B+</option>
+                                            <option value="B-" {% if form_data and form_data.get('blood_type') == 'B-' %}selected{% endif %}>B-</option>
+                                            <option value="AB+" {% if form_data and form_data.get('blood_type') == 'AB+' %}selected{% endif %}>AB+</option>
+                                            <option value="AB-" {% if form_data and form_data.get('blood_type') == 'AB-' %}selected{% endif %}>AB-</option>
+                                            <option value="O+" {% if form_data and form_data.get('blood_type') == 'O+' %}selected{% endif %}>O+</option>
+                                            <option value="O-" {% if form_data and form_data.get('blood_type') == 'O-' %}selected{% endif %}>O-</option>
+                                            <option value="Not Known" {% if form_data and form_data.get('blood_type') == 'Not Known' %}selected{% endif %}>Not Known</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label for="medical_history" class="form-label small fw-semibold">Pre-existing Medical History Summary</label>
+                                        <textarea class="form-control" id="medical_history" name="medical_history" rows="2" placeholder="List active allergies, conditions (e.g. Diabetes, Hypertension)">{{ form_data.get('medical_history', '') if form_data else '' }}</textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="emergency_contact_name" class="form-label small fw-semibold">Emergency Contact Name</label>
+                                        <input type="text" class="form-control patient-req {% if errors and errors.get('emergency_contact_name') %}is-invalid{% endif %}" id="emergency_contact_name" name="emergency_contact_name" value="{{ form_data.get('emergency_contact_name', '') if form_data else '' }}" required>
+                                        <div class="invalid-feedback">{% if errors and errors.get('emergency_contact_name') %}{{ errors.get('emergency_contact_name') }}{% else %}Emergency contact name is required.{% endif %}</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="emergency_contact_phone" class="form-label small fw-semibold">Emergency Contact Mobile</label>
+                                        <input type="text" class="form-control patient-req {% if errors and errors.get('emergency_contact_phone') %}is-invalid{% endif %}" id="emergency_contact_phone" name="emergency_contact_phone" placeholder="9876543210" value="{{ form_data.get('emergency_contact_phone', '') if form_data else '' }}" required>
+                                        <div class="invalid-feedback">{% if errors and errors.get('emergency_contact_phone') %}{{ errors.get('emergency_contact_phone') }}{% else %}Enter a valid 10-digit Indian mobile number.{% endif %}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Action Buttons -->
+                            <div class="d-grid gap-2 mt-5">
+                                <button type="submit" class="btn btn-primary text-white py-2 fw-semibold">Create Account</button>
+                                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary py-2">Back to Login</a>
+                            </div>
+                            
+                        </form>
+                        
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Specialization <-> Department 1:1 mapping
+    const specDeptMap = {
+        "Cardiology": "Cardiology Department",
+        "Neurology": "Neurology Department",
+        "Orthopedics": "Orthopedics Department",
+        "Gastroenterology": "Gastroenterology Department",
+        "General Medicine": "General Medicine Department",
+        "General Surgery": "General Surgery Department",
+        "Pulmonology": "Pulmonology Department",
+        "Nephrology": "Nephrology Department",
+        "Urology": "Urology Department",
+        "Dermatology": "Dermatology Department",
+        "Pediatrics": "Pediatrics Department",
+        "Obstetrics & Gynecology": "Obstetrics & Gynecology Department",
+        "Oncology": "Oncology Department",
+        "Radiology": "Radiology Department",
+        "Anesthesiology": "Anesthesiology Department"
+    };
+
+    const deptSpecMap = {
+        "Cardiology Department": "Cardiology",
+        "Neurology Department": "Neurology",
+        "Orthopedics Department": "Orthopedics",
+        "Gastroenterology Department": "Gastroenterology",
+        "General Medicine Department": "General Medicine",
+        "General Surgery Department": "General Surgery",
+        "Pulmonology Department": "Pulmonology",
+        "Nephrology Department": "Nephrology",
+        "Urology Department": "Urology",
+        "Dermatology Department": "Dermatology",
+        "Pediatrics Department": "Pediatrics",
+        "Obstetrics & Gynecology Department": "Obstetrics & Gynecology",
+        "Oncology Department": "Oncology",
+        "Radiology Department": "Radiology",
+        "Anesthesiology Department": "Anesthesiology"
+    };
+
+    function handleSpecialtyChange(val) {
+        const deptSelect = document.getElementById('department');
+        if (deptSelect) {
+            deptSelect.value = specDeptMap[val] || "";
+        }
+    }
+
+    function handleDepartmentChange(val) {
+        const specSelect = document.getElementById('specialty');
+        if (specSelect) {
+            specSelect.value = deptSpecMap[val] || "";
+        }
+    }
+
+    // Handle switching between dynamic role registration fields
+    function toggleRoleFields(role) {
+        // Deactivate sections
+        document.querySelectorAll('.role-section').forEach(section => {
+            section.classList.remove('active');
+        });
+        
+        // Remove 'required' status on hidden inputs to prevent validation block
+        document.querySelectorAll('.doctor-req').forEach(inp => inp.required = false);
+        document.querySelectorAll('.patient-req').forEach(inp => inp.required = false);
+        
+        if (role === 'doctor') {
+            const section = document.getElementById('doctor_fields');
+            section.classList.add('active');
+            document.querySelectorAll('.doctor-req').forEach(inp => inp.required = true);
+        } else if (role === 'patient') {
+            const section = document.getElementById('patient_fields');
+            section.classList.add('active');
+            document.querySelectorAll('.patient-req').forEach(inp => inp.required = true);
+        }
+    }
+
+    // Date of Birth validation: Reject today's date and all future dates; accept only dates earlier than today
+    const dobInput = document.getElementById('date_of_birth');
+    const dobFeedback = document.getElementById('dob_feedback');
+
+    function getTodayString() {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function getYesterdayString() {
+        const yDate = new Date();
+        yDate.setDate(yDate.getDate() - 1);
+        const yyyy = yDate.getFullYear();
+        const mm = String(yDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(yDate.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function parseDobDate(val) {
+        if (!val) return null;
+        val = val.trim();
+        // Check YYYY-MM-DD (standard HTML5 date input)
+        const isoMatch = val.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (isoMatch) {
+            const year = parseInt(isoMatch[1], 10);
+            const month = parseInt(isoMatch[2], 10) - 1;
+            const day = parseInt(isoMatch[3], 10);
+            return new Date(year, month, day);
+        }
+        // Check DD-MM-YYYY or DD/MM/YYYY (Indian/UK formats like 08-10-2026)
+        const dmyMatch = val.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+        if (dmyMatch) {
+            const day = parseInt(dmyMatch[1], 10);
+            const month = parseInt(dmyMatch[2], 10) - 1;
+            const year = parseInt(dmyMatch[3], 10);
+            return new Date(year, month, day);
+        }
+        const parsed = new Date(val);
+        return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function validateDobField() {
+        if (!dobInput) return true;
+        const roleSelect = document.getElementById('role_name');
+        if (roleSelect && roleSelect.value !== 'patient') {
+            dobInput.setCustomValidity('');
+            dobInput.classList.remove('is-invalid');
+            return true;
+        }
+
+        const val = dobInput.value;
+        if (!val) {
+            dobInput.setCustomValidity('Date of birth is required.');
+            if (dobFeedback) dobFeedback.textContent = 'Date of birth is required.';
+            return false;
+        }
+
+        const dateObj = parseDobDate(val);
+        if (!dateObj) {
+            dobInput.classList.add('is-invalid');
+            dobInput.setCustomValidity('Please enter a valid date of birth.');
+            if (dobFeedback) dobFeedback.textContent = 'Please enter a valid date of birth.';
+            return false;
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        dateObj.setHours(0, 0, 0, 0);
+
+        if (dateObj >= today) {
+            dobInput.classList.add('is-invalid');
+            dobInput.setCustomValidity('Date of birth must be earlier than today.');
+            if (dobFeedback) dobFeedback.textContent = 'Date of birth must be earlier than today.';
+            return false;
+        } else {
+            dobInput.classList.remove('is-invalid');
+            dobInput.setCustomValidity('');
+            return true;
+        }
+    }
+
+    if (dobInput) {
+        dobInput.max = getYesterdayString();
+        dobInput.addEventListener('change', validateDobField);
+        dobInput.addEventListener('input', validateDobField);
+    }
+
+    // Enable Bootstrap validation checks
+    (() => {
+      'use strict'
+      const forms = document.querySelectorAll('.needs-validation')
+      Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+          const dobValid = validateDobField();
+          if (!form.checkValidity() || !dobValid) {
+            event.preventDefault()
+            event.stopPropagation()
+          }
+          form.classList.add('was-validated')
+        }, false)
+      })
+    })()
+    
+    // Initialize correct default state
+    toggleRoleFields("{{ form_data.get('role_name', 'patient') if form_data else 'patient' }}");
+</script>
+{% endblock %}
+

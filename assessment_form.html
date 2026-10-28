@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Pre-Procedure Assessment | MediPrep{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="mb-4">
+        <a href="{{ url_for('patient.dashboard') }}" class="text-decoration-none text-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to Patient Dashboard
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="card-header bg-primary text-white py-3 px-4 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-clipboard2-pulse-fill me-2"></i>Pre-Procedure Clinical Assessment</h5>
+                    {% if assessment and assessment.status == 'submitted_locked' %}
+                        <span class="badge bg-white text-primary fw-bold px-3 py-1.5 rounded-pill"><i class="bi bi-lock-fill me-1"></i>Submitted & Locked</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark fw-bold px-3 py-1.5 rounded-pill">Draft Mode</span>
+                    {% endif %}
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-secondary mb-4">
+                        Please complete this preoperative self-assessment regarding your clinical history and emergency contact information prior to your procedure.
+                    </p>
+
+                    {% if assessment and assessment.status == 'submitted_locked' %}
+                        <div class="alert alert-info border-0 rounded-3 mb-4">
+                            <i class="bi bi-shield-check-fill fs-5 me-2 text-info"></i>
+                            <strong>Assessment Locked:</strong> This assessment was submitted on {{ assessment.submitted_at }}. It is locked and cannot be edited.
+                        </div>
+                    {% endif %}
+
+                    <form action="{{ url_for('patient.assessment_form', schedule_id=schedule.id) }}" method="POST">
+                        <fieldset {% if assessment and assessment.status == 'submitted_locked' %}disabled{% endif %}>
+                            <!-- Known Allergies -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-dark">Known Allergies (Food, Medication, Latex, Contrast Dye)</label>
+                                <textarea name="allergies" class="form-control" rows="2" placeholder="e.g. Penicillin allergy, Iodine dye sensitivity, None">{{ assessment.allergies if assessment else '' }}</textarea>
+                            </div>
+
+                            <!-- Current Medications -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-dark">Current Daily Medications & Supplements</label>
+                                <textarea name="current_medications" class="form-control" rows="2" placeholder="e.g. Metformin 500mg, Aspirin 75mg daily">{{ assessment.current_medications if assessment else '' }}</textarea>
+                            </div>
+
+                            <!-- Previous Surgeries -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-dark">Previous Surgeries / Surgical History</label>
+                                <textarea name="previous_surgeries" class="form-control" rows="2" placeholder="e.g. Appendectomy 2018, Gallbladder removal 2021">{{ assessment.previous_surgeries if assessment else '' }}</textarea>
+                            </div>
+
+                            <!-- Anesthesia Problems -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-dark">Previous Anesthesia Complications or Family History</label>
+                                <textarea name="anesthesia_problems" class="form-control" rows="2" placeholder="e.g. Severe nausea after anesthesia, None">{{ assessment.anesthesia_problems if assessment else '' }}</textarea>
+                            </div>
+
+                            <!-- Medical History Notes -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-dark">Relevant Medical Conditions / Notes</label>
+                                <textarea name="medical_history_notes" class="form-control" rows="2" placeholder="e.g. Hypertension, Type-2 Diabetes, Asthma">{{ assessment.medical_history_notes if assessment else '' }}</textarea>
+                            </div>
+
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark">Emergency Contact Name *</label>
+                                    <input type="text" name="emergency_contact_name" class="form-control" value="{{ assessment.emergency_contact_name if assessment else '' }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark">Emergency Contact Phone *</label>
+                                    <input type="text" name="emergency_contact_phone" class="form-control" value="{{ assessment.emergency_contact_phone if assessment else '' }}" required>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        {% if not assessment or assessment.status != 'submitted_locked' %}
+                            <div class="d-flex gap-3 mt-4">
+                                <button type="submit" name="action" value="save_draft" class="btn btn-outline-secondary rounded-pill px-4">
+                                    <i class="bi bi-save me-1"></i>Save Draft
+                                </button>
+                                <button type="submit" name="action" value="submit_lock" class="btn btn-primary rounded-pill px-5 flex-grow-1 shadow-sm">
+                                    <i class="bi bi-shield-lock-fill me-2"></i>Submit & Lock Assessment
+                                </button>
+                            </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

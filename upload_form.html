@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Laboratory Report | MediPrep{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="mb-4">
+        <a href="{{ url_for('lab.dashboard') }}" class="text-decoration-none text-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to Hospital Lab Dashboard
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Upload Form Card -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="card-header bg-primary text-white py-3 px-4">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-file-earmark-arrow-up-fill me-2"></i>Upload Laboratory Report</h5>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Task Summary -->
+                    <div class="p-3 bg-light rounded-3 mb-4">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <span class="text-muted small">Patient Name:</span>
+                                <div class="fw-bold text-dark">{{ investigation.patient_first_name }} {{ investigation.patient_last_name }}</div>
+                            </div>
+                            <div class="col-6">
+                                <span class="text-muted small">Procedure:</span>
+                                <div class="fw-bold text-dark">{{ investigation.procedure_name }}</div>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <span class="text-muted small">Investigation Request:</span>
+                                <div class="fw-bold text-primary fs-5">{{ investigation.task_name }}</div>
+                            </div>
+                            <div class="col-12 mt-2 pt-2 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <span class="small text-muted"><i class="bi bi-info-circle me-1"></i>Demonstration sample test report available:</span>
+                                <a href="{{ url_for('lab.download_sample_report_pdf', item_id=investigation.id) }}" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                    <i class="bi bi-download me-1"></i>Download Sample Test Report PDF
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upload Form -->
+                    <form action="{{ url_for('lab.upload_report', item_id=investigation.id) }}" method="POST" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-dark">Laboratory Name *</label>
+                            <input type="text" name="lab_name" class="form-control" value="Central Hospital Clinical Laboratory" required>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-dark">Report Reference No. / Lab Report ID *</label>
+                                <input type="text" name="external_report_id" class="form-control" placeholder="e.g. ECG-2026-9901" required>
+                                <div class="form-text small text-muted">Unique reference printed on PDF (used for duplicate detection).</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-dark">Report Date *</label>
+                                <input type="date" name="report_date" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-dark">Test / Investigation Name</label>
+                            <input type="text" name="task_name" class="form-control" value="{{ investigation.task_name }}" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-dark">Optional Clinical Notes / Remarks</label>
+                            <textarea name="notes" class="form-control" rows="2" placeholder="Enter optional test remarks or comments..."></textarea>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-dark">Select Laboratory Report PDF / Image File *</label>
+                            <input type="file" name="report_file" class="form-control form-control-lg" accept=".pdf,.png,.jpg,.jpeg" required>
+                            <div class="form-text small text-muted">Max file size: 5MB. SHA-256 integrity hash generated automatically.</div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 w-100 shadow-sm">
+                            <i class="bi bi-file-earmark-check-fill me-2"></i>Save Laboratory Report
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Existing Reports Sidebar -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="card-header bg-white py-3 px-4 border-bottom">
+                    <h6 class="fw-bold text-dark mb-0"><i class="bi bi-folder-check me-2"></i>Uploaded Reports for this Investigation</h6>
+                </div>
+                <div class="card-body p-4">
+                    {% if history %}
+                        <div class="list-group list-group-flush">
+                            {% for rep in history %}
+                                <div class="list-group-item px-0 py-3 border-bottom">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="fw-bold text-dark">
+                                            {% if rep.external_report_id %}Ref: {{ rep.external_report_id }}{% else %}Report ID: {{ rep.id }}{% endif %}
+                                        </span>
+                                        {% if rep.verification_status == 'verified' %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0.5">Verified</span>
+                                        {% elif rep.verification_status in ['needs_review', 'needs_clarification'] %}
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-0.5">Needs Clarification</span>
+                                        {% else %}
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-0.5">Pending Doctor Review</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="small text-secondary mb-1">
+                                        <div><strong>Lab:</strong> {{ rep.lab_name }}</div>
+                                        <div><strong>Uploaded:</strong> {{ rep.uploaded_at }} by {{ rep.uploader_first_name }} {{ rep.uploader_last_name }}</div>
+                                        {% if rep.report_date %}<div><strong>Report Date:</strong> {{ rep.report_date }}</div>{% endif %}
+                                    </div>
+                                    <a href="{{ url_for('lab.view_report_file', filename=rep.file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3 mt-1">
+                                        <i class="bi bi-file-earmark-pdf me-1"></i>View Report
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">No reports uploaded yet.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
