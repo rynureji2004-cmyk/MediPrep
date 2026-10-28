@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Hospital Laboratory Portal | MediPrep{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <span class="badge bg-info-subtle text-info border border-info-subtle px-3 py-1.5 rounded-pill fw-bold mb-2">
+                <i class="bi bi-hospital me-1"></i> Hospital Laboratory Service
+            </span>
+            <h2 class="fw-bold text-dark mb-0">{{ lab_name }}</h2>
+            <p class="text-secondary small mb-0">Authorized Hospital Laboratory Technician Portal for Official Report Uploads</p>
+        </div>
+    </div>
+
+    <!-- Assigned Investigations Table -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h5 class="fw-bold text-dark mb-0"><i class="bi bi-clipboard-pulse text-primary me-2"></i>Assigned Laboratory Investigations</h5>
+                <span class="badge bg-primary rounded-pill mt-1">{{ investigations|length }} Requests</span>
+            </div>
+            <form action="{{ url_for('lab.dashboard') }}" method="GET" class="d-flex gap-2 align-items-center mb-0">
+                <input type="text" name="search" class="form-control form-control-sm rounded-pill px-3" placeholder="Filter Patient (e.g. John Doe) or Test..." value="{{ search_query or '' }}">
+                <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3"><i class="bi bi-search"></i> Search</button>
+                {% if search_query %}
+                    <a href="{{ url_for('lab.dashboard') }}" class="btn btn-sm btn-outline-secondary rounded-pill px-2">Clear</a>
+                {% endif %}
+            </form>
+        </div>
+        <div class="card-body p-0">
+            {% if investigations %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Patient</th>
+                                <th>Procedure</th>
+                                <th>Investigation / Test</th>
+                                <th>Scheduled Date</th>
+                                <th>Report Status</th>
+                                <th>Verification</th>
+                                <th class="pe-4 text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in investigations %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="fw-bold text-dark">{{ item.patient_first_name }} {{ item.patient_last_name }}</div>
+                                        <div class="small text-muted">{{ item.patient_email }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">{{ item.procedure_code }}</span>
+                                        <div class="small text-dark fw-medium">{{ item.procedure_name }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold text-primary">{{ item.task_name }}</div>
+                                        {% if item.is_critical %}
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle small px-2 py-0.5">Critical</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="small text-dark fw-medium">{{ item.formatted_scheduled_at or item.scheduled_at }}</div>
+                                        <div class="small text-muted">{{ item.location }}</div>
+                                    </td>
+                                    <td>
+                                        {% if item.report_status == 'Uploaded' or item.latest_report_id %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                                <i class="bi bi-file-earmark-check me-1"></i>Uploaded
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                                <i class="bi bi-clock-history me-1"></i>Pending Upload
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.display_verification_status == 'Verified' or item.verification_status == 'verified' %}
+                                            <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Verified</span>
+                                        {% elif item.display_verification_status == 'Needs Clarification' or item.verification_status in ['needs_review', 'needs_clarification'] %}
+                                            <span class="badge bg-danger px-2 py-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Needs Clarification</span>
+                                        {% elif item.display_verification_status == 'Pending Review' or item.latest_report_id %}
+                                            <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-clock-history me-1"></i>Pending Review</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-secondary border px-2 py-1">Unverified</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="pe-4 text-end">
+                                        <div class="d-inline-flex gap-2">
+                                            <a href="{{ url_for('lab.download_sample_report_pdf', item_id=item.id) }}" class="btn btn-sm btn-outline-danger rounded-pill px-3" title="Download Sample Test Report for {{ item.patient_first_name }} {{ item.patient_last_name }} (SAMPLE — NOT FOR CLINICAL USE)">
+                                                <i class="bi bi-file-earmark-medical me-1"></i>Sample Report
+                                            </a>
+                                            <a href="{{ url_for('lab.upload_report', item_id=item.id) }}" class="btn btn-sm btn-primary rounded-pill px-3">
+                                                <i class="bi bi-upload me-1"></i>Upload Report
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="p-5 text-center text-muted">
+                    <i class="bi bi-file-earmark-x fs-1 d-block mb-3 text-secondary"></i>
+                    No laboratory investigation requests assigned at this time.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

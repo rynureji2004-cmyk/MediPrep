@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Control Console - MediPrep Readiness{% endblock %}
+
+{% block extra_css %}
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row g-4">
+        <!-- Sidebar Navigation -->
+        <div class="col-lg-3 col-md-4">
+            <div class="card border-0 shadow-sm p-3 bg-white" style="border-radius: 16px;">
+                <div class="d-flex align-items-center gap-2 mb-4 px-2">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold text-dark mb-0">System Control</h6>
+                        <span class="text-secondary small">Administrator</span>
+                    </div>
+                </div>
+                
+                <hr class="text-muted mt-0 mb-3">
+                
+                <nav class="nav nav-pills flex-column gap-1">
+                    <a class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %} d-flex align-items-center gap-2 px-3 py-2.5 rounded-3" href="{{ url_for('admin.dashboard') }}">
+                        <i class="bi bi-grid-fill"></i> Control Console
+                    </a>
+                    <a class="nav-link {% if request.endpoint in ['admin.doctors', 'admin.add_doctor', 'admin.edit_doctor'] %}active{% endif %} d-flex align-items-center gap-2 px-3 py-2.5 rounded-3" href="{{ url_for('admin.doctors') }}">
+                        <i class="bi bi-people-fill"></i> Clinicians Directory
+                    </a>
+                    <a class="nav-link {% if request.endpoint in ['admin.patients', 'admin.add_patient', 'admin.edit_patient'] %}active{% endif %} d-flex align-items-center gap-2 px-3 py-2.5 rounded-3" href="{{ url_for('admin.patients') }}">
+                        <i class="bi bi-person-fill-check"></i> Patients Directory
+                    </a>
+                    <a class="nav-link {% if request.endpoint in ['admin.procedures', 'admin.add_procedure', 'admin.edit_procedure'] %}active{% endif %} d-flex align-items-center gap-2 px-3 py-2.5 rounded-3" href="{{ url_for('admin.procedures') }}">
+                        <i class="bi bi-journal-medical"></i> Procedure Catalog
+                    </a>
+                </nav>
+                
+                <div class="mt-5 p-3 bg-light rounded-3 text-center">
+                    <span class="d-block small text-secondary fw-semibold mb-1">Status</span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle py-1.5 px-3 rounded-pill text-uppercase small d-inline-block">System Online</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Panel Content -->
+        <div class="col-lg-9 col-md-8">
+            <!-- Header Widget -->
+            <div class="portal-hero d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+                <div>
+                    <h1 class="h2 mb-1 fw-bold"><i class="bi bi-shield-lock-fill me-2"></i>Admin Control Console</h1>
+                    <p class="text-secondary small mb-0 text-white-50">Manage clinician listings, patient files, and configure pre-operative protocol templates.</p>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <a href="{{ url_for('admin.add_patient') }}" class="btn btn-light text-primary fw-bold px-3 py-2 rounded-pill shadow-sm">
+                        <i class="bi bi-person-plus-fill me-1"></i>Create Patient Account
+                    </a>
+                    <span class="badge bg-light text-primary py-2 px-3 fw-bold rounded-pill shadow-sm">Secure Admin Mode</span>
+                </div>
+            </div>
+            
+            <!-- Metadata summary cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-sm-6 col-lg-3">
+                    <div class="card border-0 shadow-sm p-3 bg-white h-100 text-center hover-card">
+                        <i class="bi bi-people-fill text-primary fs-2 mb-2 d-block"></i>
+                        <span class="text-secondary small text-uppercase fw-semibold mb-1 d-block">Clinicians</span>
+                        <h3 class="fw-bold mb-0 text-dark">{{ stats.doctors }}</h3>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="card border-0 shadow-sm p-3 bg-white h-100 text-center hover-card">
+                        <i class="bi bi-person-fill-check text-success fs-2 mb-2 d-block"></i>
+                        <span class="text-secondary small text-uppercase fw-semibold mb-1 d-block">Patients</span>
+                        <h3 class="fw-bold mb-0 text-dark">{{ stats.patients }}</h3>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="card border-0 shadow-sm p-3 bg-white h-100 text-center hover-card">
+                        <i class="bi bi-journal-medical text-info fs-2 mb-2 d-block"></i>
+                        <span class="text-secondary small text-uppercase fw-semibold mb-1 d-block">Catalog</span>
+                        <h3 class="fw-bold mb-0 text-dark">{{ stats.procedures }}</h3>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="card border-0 shadow-sm p-3 bg-white h-100 text-center hover-card">
+                        <i class="bi bi-calendar2-check-fill text-warning fs-2 mb-2 d-block"></i>
+                        <span class="text-secondary small text-uppercase fw-semibold mb-1 d-block">Bookings</span>
+                        <h3 class="fw-bold mb-0 text-dark">{{ stats.schedules }}</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Administrative Quick Actions -->
+            <div class="card border-0 shadow-sm p-3 mb-4 bg-white" style="border-radius: 14px;">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                            <i class="bi bi-lightning-charge-fill fs-5"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold text-dark mb-0">Administrative Quick Actions</h6>
+                            <span class="text-secondary small">Direct account provisioning shortcuts and catalog management</span>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{{ url_for('admin.add_patient') }}" class="btn btn-success text-white px-3 py-2 rounded-pill shadow-sm">
+                            <i class="bi bi-person-plus-fill me-1"></i>Create Patient Account
+                        </a>
+                        <a href="{{ url_for('admin.add_doctor') }}" class="btn btn-outline-primary px-3 py-2 rounded-pill shadow-sm">
+                            <i class="bi bi-person-badge-fill me-1"></i>Add Clinician Account
+                        </a>
+                        <a href="{{ url_for('admin.add_procedure') }}" class="btn btn-outline-secondary px-3 py-2 rounded-pill">
+                            <i class="bi bi-plus-circle me-1"></i>New Procedure
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Upcoming Procedures (Top 5) -->
+            <div class="card border-0 shadow-sm p-4 bg-white">
+                <h5 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-calendar2-check-fill text-primary me-2"></i>Upcoming Scheduled Procedures</h5>
+                {% if not upcoming %}
+                    <p class="small text-secondary mb-0 p-3 bg-light rounded-3 text-center"><i class="bi bi-info-circle me-1"></i> No upcoming procedure schedules registered in the database.</p>
+                {% else %}
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Procedure</th>
+                                    <th>Scheduled Doctor</th>
+                                    <th>Date & Time</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in upcoming %}
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold text-dark">{{ s.patient_first_name }} {{ s.patient_last_name }}</div>
+                                            <div class="text-secondary small" style="font-size: 0.8rem;">{{ s.patient_email }}</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border mb-1">{{ s.procedure_code or 'Code Not Available' }}</span>
+                                            <div class="small fw-semibold text-dark" style="font-size: 0.85rem;">{{ s.procedure_name or 'Procedure Not Available' }}</div>
+                                        </td>
+                                        <td>
+                                            {% if s.doctor_first_name and s.doctor_last_name %}
+                                                <div class="small fw-bold text-dark"><i class="bi bi-person-badge text-primary me-1"></i>Dr. {{ s.doctor_first_name }} {{ s.doctor_last_name }}</div>
+                                            {% else %}
+                                                <span class="text-secondary small italic">Not Assigned</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="small text-dark">{{ s.formatted_scheduled_at or s.scheduled_at }}</div>
+                                        </td>
+                                        <td>
+                                            {% if s.readiness_status == 'green' %}
+                                                <span class="badge badge-ready-green text-uppercase fw-semibold">Ready</span>
+                                            {% elif s.readiness_status == 'yellow' %}
+                                                <span class="badge badge-ready-yellow text-uppercase fw-semibold">Warning</span>
+                                            {% elif s.readiness_status == 'orange' %}
+                                                <span class="badge badge-ready-orange text-uppercase fw-semibold">Review</span>
+                                            {% else %}
+                                                <span class="badge badge-ready-red text-uppercase fw-semibold">Not Ready</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

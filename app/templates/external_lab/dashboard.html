@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}External Laboratory Portal | MediPrep{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <span class="badge bg-purple-subtle text-purple border border-purple-subtle px-3 py-1.5 rounded-pill fw-bold mb-2" style="background-color: #f3e8ff; color: #7e22ce; border-color: #e9d5ff;">
+                <i class="bi bi-building-fill-check me-1"></i> External Laboratory Service
+            </span>
+            <h2 class="fw-bold text-dark mb-0">{{ lab_name }}</h2>
+            <p class="text-secondary small mb-0">Authorized External Laboratory Technician Portal for Official External Investigation Reports</p>
+        </div>
+    </div>
+
+    <!-- External Investigations Table -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-white py-3 px-4 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h5 class="fw-bold text-dark mb-0"><i class="bi bi-box-arrow-in-right text-primary me-2"></i>External Laboratory Requests</h5>
+                <span class="small text-muted">Select patient & procedure to upload official external report</span>
+            </div>
+            <form method="GET" action="{{ url_for('external_lab.dashboard') }}" class="d-flex gap-2">
+                <input type="text" name="search" class="form-control form-control-sm rounded-pill px-3" placeholder="Search patient name..." value="{{ search }}">
+                <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3"><i class="bi bi-search"></i> Search</button>
+                {% if search %}
+                    <a href="{{ url_for('external_lab.dashboard') }}" class="btn btn-sm btn-outline-secondary rounded-pill">Clear</a>
+                {% endif %}
+            </form>
+        </div>
+        <div class="card-body p-0">
+            {% if investigations %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Patient</th>
+                                <th>Procedure</th>
+                                <th>Investigation / Test</th>
+                                <th>Scheduled Date</th>
+                                <th>Report Status</th>
+                                <th>Verification</th>
+                                <th class="pe-4 text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in investigations %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="fw-bold text-dark">{{ item.patient_first_name }} {{ item.patient_last_name }}</div>
+                                        <div class="small text-muted">{{ item.patient_email }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">{{ item.procedure_code }}</span>
+                                        <div class="small text-dark fw-medium">{{ item.procedure_name }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold text-primary">{{ item.task_name }}</div>
+                                        <span class="badge bg-warning-subtle text-dark border px-2 py-0.5 small">EXTERNAL LAB</span>
+                                    </td>
+                                    <td>
+                                        <div class="small text-dark fw-medium">{{ item.scheduled_at }}</div>
+                                        <div class="small text-muted">{{ item.location }}</div>
+                                    </td>
+                                    <td>
+                                        {% if item.latest_report_id %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                                <i class="bi bi-lock-fill me-1"></i>Report Uploaded (v{{ item.report_version }})
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                                <i class="bi bi-clock-history me-1"></i>Awaiting External Upload
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.verification_status == 'verified' %}
+                                            <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Verified</span>
+                                        {% elif item.verification_status == 'needs_review' %}
+                                            <span class="badge bg-danger px-2 py-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Needs Review</span>
+                                        {% elif item.latest_report_id %}
+                                            <span class="badge bg-info text-dark px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>Awaiting Doctor Verification</span>
+                                        {% else %}
+                                            <span class="text-muted small">Not Uploaded</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="pe-4 text-end">
+                                        <a href="{{ url_for('external_lab.upload_report', item_id=item.id) }}" class="btn btn-sm btn-primary rounded-pill px-3">
+                                            <i class="bi bi-upload me-1"></i>Upload External Report
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="p-5 text-center text-muted">
+                    <i class="bi bi-building-x fs-1 d-block mb-3 text-secondary"></i>
+                    No external investigation requests assigned at this time.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

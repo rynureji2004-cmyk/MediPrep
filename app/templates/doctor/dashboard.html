@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+
+{% block title %}Physician Control Center - MediPrep Readiness{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 1280px;">
+
+    <!-- TOP SECTION: Welcome Banner & Hero -->
+    <div class="portal-hero d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 p-4 rounded-4 bg-primary text-white shadow-sm">
+        <div>
+            <span class="badge bg-white text-primary fw-bold px-3 py-1 mb-2 rounded-pill">Physician Control Center</span>
+            <h2 class="h3 mb-1 fw-bold">Welcome back, Dr. {{ session.get('first_name', 'Robert') }}!</h2>
+            <p class="text-white-50 small mb-0">MediPrep Hospital Procedure Preparation and Readiness System</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('doctor.add_schedule') }}" class="btn btn-light text-primary px-3 rounded-pill shadow-sm"><i class="bi bi-plus-circle-fill me-1"></i>Schedule Procedure</a>
+            <a href="{{ url_for('doctor.reports') }}" class="btn btn-outline-light px-3 rounded-pill">Clinical Reports</a>
+            <a href="{{ url_for('doctor.schedules') }}" class="btn btn-outline-light px-3 rounded-pill">Search Worklist</a>
+        </div>
+    </div>
+
+    <!-- ROW 1: 4 Summary Cards in ONE ROW -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm p-3 bg-white h-100 rounded-4 d-flex flex-row align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase d-block mb-1">Today's Cases</span>
+                    <h3 class="fw-bold mb-0 text-dark">{{ today_procedures|length }}</h3>
+                </div>
+                <div class="fs-2 text-primary"><i class="bi bi-calendar2-event"></i></div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm p-3 bg-white h-100 rounded-4 d-flex flex-row align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase d-block mb-1">Ready Patients</span>
+                    <h3 class="fw-bold mb-0 text-success">{{ ready_count }}</h3>
+                </div>
+                <div class="fs-2 text-success"><i class="bi bi-check-circle-fill"></i></div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm p-3 bg-white h-100 rounded-4 d-flex flex-row align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase d-block mb-1">Pending Patients</span>
+                    <h3 class="fw-bold mb-0 text-warning-emphasis">{{ pending_count }}</h3>
+                </div>
+                <div class="fs-2 text-warning"><i class="bi bi-exclamation-circle-fill"></i></div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm p-3 bg-white h-100 rounded-4 d-flex flex-row align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase d-block mb-1">Avg Compliance</span>
+                    <h3 class="fw-bold mb-0 text-dark">{{ avg_readiness }}%</h3>
+                </div>
+                <div class="fs-2 text-info"><i class="bi bi-pie-chart-fill"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ROW 2: Balanced Two-Column Layout (Readiness Board & Readiness Distribution) -->
+    <div class="row g-4 mb-4 align-items-stretch">
+        <!-- LEFT COLUMN: Today's Readiness Board -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm p-4 bg-white rounded-4 h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-0"><i class="bi bi-card-checklist text-primary me-2"></i>Today's Procedure-Day Readiness Board</h5>
+                            <span class="text-muted small">Live status of patient readiness and procedure-day check-in</span>
+                        </div>
+                        <span class="badge bg-primary rounded-pill px-3 py-1">{{ today_procedures|length }} Today</span>
+                    </div>
+
+                    {% if not today_procedures %}
+                        <div class="p-4 text-center text-muted bg-light rounded-3 my-auto">
+                            <i class="bi bi-calendar-check fs-3 d-block mb-2 text-secondary"></i>
+                            No procedures scheduled for today.
+                        </div>
+                    {% else %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light small">
+                                    <tr>
+                                        <th class="ps-2">Patient</th>
+                                        <th>Procedure</th>
+                                        <th>Time</th>
+                                        <th>Check-in Status</th>
+                                        <th>Readiness</th>
+                                        <th class="pe-2 text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for s in today_procedures %}
+                                        <tr>
+                                            <td class="ps-2">
+                                                <div class="fw-bold text-dark small">{{ s.patient_first_name }} {{ s.patient_last_name }}</div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-dark border me-1" style="font-size:0.65rem;">{{ s.procedure_code }}</span>
+                                                <span class="small fw-semibold text-dark">{{ s.procedure_name }}</span>
+                                            </td>
+                                            <td class="small fw-medium">
+                                                {{ s.formatted_time if s.formatted_time else s.scheduled_at }}
+                                            </td>
+                                            <td>
+                                                <form action="{{ url_for('doctor.update_check_in', schedule_id=s.id) }}" method="POST" class="d-inline">
+                                                    <select name="check_in_status" class="form-select form-select-sm d-inline-block w-auto border-secondary-subtle py-0 ps-2 pe-4" style="font-size:0.75rem;" onchange="this.form.submit()">
+                                                        <option value="scheduled" {% if s.check_in_status == 'scheduled' %}selected{% endif %}>📅 Scheduled</option>
+                                                        <option value="arrived" {% if s.check_in_status == 'arrived' %}selected{% endif %}>🏥 Arrived</option>
+                                                        <option value="checked_in" {% if s.check_in_status == 'checked_in' %}selected{% endif %}>📋 Checked In</option>
+                                                        <option value="ready_for_procedure" {% if s.check_in_status == 'ready_for_procedure' %}selected{% endif %}>🟢 Ready</option>
+                                                    </select>
+                                                </form>
+                                            </td>
+                                            <td>
+                                                {% if s.readiness_status == 'green' %}
+                                                    <span class="badge bg-success px-2 py-1 text-uppercase fw-bold" style="font-size:0.65rem;">READY</span>
+                                                {% elif s.readiness_status == 'yellow' %}
+                                                    <span class="badge bg-warning text-dark px-2 py-1 text-uppercase fw-bold" style="font-size:0.65rem;">PENDING</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger px-2 py-1 text-uppercase fw-bold" style="font-size:0.65rem;">NOT READY</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="pe-2 text-end">
+                                                <a href="{{ url_for('doctor.edit_schedule', schedule_id=s.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-0.5" style="font-size:0.75rem;">Review</a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Readiness Distribution Chart -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm p-4 bg-white rounded-4 h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <h5 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-pie-chart text-primary me-2"></i>Preoperative Readiness Distribution</h5>
+                    <div class="chart-container d-flex align-items-center justify-content-center" style="height: 220px;">
+                        <canvas id="readinessChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ROW 3: Upcoming Procedure Schedules (FULL WIDTH) -->
+    <div class="card border-0 shadow-sm p-4 bg-white rounded-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+            <div>
+                <h5 class="card-title fw-bold text-dark mb-0"><i class="bi bi-calendar-event text-primary me-2"></i>Upcoming Procedure Schedules</h5>
+                <span class="text-muted small">Comprehensive view of active scheduled procedures</span>
+            </div>
+            <a href="{{ url_for('doctor.schedules') }}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">View All Cases &rarr;</a>
+        </div>
+
+        {% if not schedules %}
+            <p class="small text-secondary mb-0 p-3 bg-light rounded-3 text-center"><i class="bi bi-info-circle me-1"></i> No upcoming procedure schedules found.</p>
+        {% else %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-3">Patient</th>
+                            <th>Procedure</th>
+                            <th>Scheduled Date</th>
+                            <th>Status</th>
+                            <th class="pe-3 text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in schedules %}
+                            <tr>
+                                <td class="ps-3">
+                                    <div class="fw-bold text-dark">{{ s.patient_first_name }} {{ s.patient_last_name }}</div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border mb-1" style="font-size:0.7rem;">{{ s.procedure_code }}</span>
+                                    <div class="small fw-semibold text-dark">{{ s.procedure_name }}</div>
+                                </td>
+                                <td class="small text-secondary">{{ s.formatted_scheduled_at or s.scheduled_at }}</td>
+                                <td>
+                                    {% if s.readiness_status == 'green' %}
+                                        <span class="badge bg-success px-3 py-1.5 text-uppercase fw-semibold">Ready</span>
+                                    {% elif s.readiness_status == 'yellow' %}
+                                        <span class="badge bg-warning text-dark px-3 py-1.5 text-uppercase fw-semibold">Warning</span>
+                                    {% else %}
+                                        <span class="badge bg-danger px-3 py-1.5 text-uppercase fw-semibold">Not Ready</span>
+                                    {% endif %}
+                                </td>
+                                <td class="pe-3 text-end">
+                                    <a href="{{ url_for('doctor.edit_schedule', schedule_id=s.id) }}" class="btn btn-sm btn-primary rounded-pill px-3">Review & Edit</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- ROW 4: Two Column Layout (Clinical Risk Alerts & Recent Official Reports) -->
+    <div class="row g-4 mb-4 align-items-stretch">
+        <!-- LEFT COLUMN: Clinical Risk Alerts -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm p-4 bg-white rounded-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <h5 class="card-title fw-bold text-dark mb-0"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Clinical Risk Alerts</h5>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-0.5 rounded-pill" style="font-size: 0.7rem;">{{ risk_alerts|length }} Active</span>
+                </div>
+
+                {% if not risk_alerts %}
+                    <div class="alert alert-success py-4 small text-center mb-0 my-auto rounded-3">
+                        <i class="bi bi-check-circle-fill text-success fs-4 me-1 d-block mb-1"></i>
+                        <strong>All Clear</strong>
+                        <p class="mb-0 text-secondary mt-1" style="font-size: 0.78rem;">All patients are currently compliant with pre-op guidelines.</p>
+                    </div>
+                {% else %}
+                    <div class="list-group list-group-flush overflow-auto" style="max-height: 320px;">
+                        {% for alert in risk_alerts %}
+                            <div class="list-group-item bg-transparent px-0 py-2.5 border-bottom">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="badge bg-danger text-white px-2 py-0.5 text-uppercase" style="font-size: 0.65rem;">{{ alert.type }}</span>
+                                    <a href="{{ url_for('doctor.edit_schedule', schedule_id=alert.schedule_id) }}" class="btn btn-sm btn-outline-danger py-0.5 px-2 rounded-pill" style="font-size: 0.7rem;">Review &rarr;</a>
+                                </div>
+                                <div class="fw-bold text-dark mb-1" style="font-size: 0.85rem;">{{ alert.patient_name }}</div>
+                                <p class="mb-0 text-muted" style="font-size: 0.78rem; line-height: 1.3;">{{ alert.message }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Recent Official Reports (Deduplicated) -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm p-4 bg-white rounded-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <h5 class="card-title fw-bold text-dark mb-0"><i class="bi bi-file-earmark-medical-fill text-primary me-2"></i>Recent Official Reports</h5>
+                    <span class="badge bg-primary-subtle text-primary border px-2 py-0.5 rounded-pill" style="font-size: 0.7rem;">Deduplicated</span>
+                </div>
+
+                {% if not recent_uploads %}
+                    <p class="small text-secondary mb-0 p-4 bg-light rounded-3 text-center my-auto"><i class="bi bi-info-circle me-1"></i> No report uploads recorded.</p>
+                {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 0.82rem;">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Report Name</th>
+                                    <th>Patient</th>
+                                    <th>Source</th>
+                                    <th>Status</th>
+                                    <th class="text-end" style="min-width: 140px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for upload in recent_uploads %}
+                                    <tr>
+                                        <td>
+                                            <div class="fw-bold text-dark text-truncate" style="max-width: 130px;" title="{{ upload.file_name }}">{{ upload.file_name }}</div>
+                                            <div class="text-muted" style="font-size: 0.72rem;">{{ upload.task_name }}</div>
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('doctor.edit_schedule', schedule_id=upload.schedule_id) }}" class="fw-semibold text-primary text-decoration-none" title="Open Patient Schedule">
+                                                {{ upload.patient_first_name }} {{ upload.patient_last_name }} <i class="bi bi-box-arrow-up-right" style="font-size: 0.65rem;"></i>
+                                            </a>
+                                        </td>
+                                        <td>
+                                            {% if upload.lab_type == 'external' %}
+                                                <span class="badge bg-purple-subtle text-purple border" style="background-color:#f3e8ff;color:#7e22ce;font-size:0.65rem;">External Laboratory</span>
+                                            {% else %}
+                                                <span class="badge bg-info-subtle text-info border" style="font-size:0.65rem;">Hospital Laboratory</span>
+                                            {% endif %}
+                                            <div class="text-secondary fw-semibold" style="font-size:0.72rem;">{{ upload.display_lab_name }}</div>
+                                            {% if upload.external_report_id %}
+                                                <div class="text-muted" style="font-size:0.68rem;">ID: {{ upload.external_report_id }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if upload.verification_status == 'verified' %}
+                                                <span class="badge bg-success-subtle text-success border px-2 py-0.5" style="font-size:0.68rem;"><i class="bi bi-check-circle-fill me-1"></i>Verified</span>
+                                            {% elif upload.verification_status in ['needs_review', 'needs_clarification'] %}
+                                                <span class="badge bg-danger-subtle text-danger border px-2 py-0.5" style="font-size:0.68rem;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Needs Clarification</span>
+                                            {% elif upload.verification_status == 'external_received' %}
+                                                <span class="badge bg-info-subtle text-info border px-2 py-0.5" style="font-size:0.68rem;"><i class="bi bi-inbox-fill me-1"></i>External Received</span>
+                                            {% else %}
+                                                <span class="badge bg-warning-subtle text-warning border px-2 py-0.5" style="font-size:0.68rem;"><i class="bi bi-clock-history me-1"></i>Pending Review</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end text-nowrap">
+                                            <div class="d-inline-flex gap-1 align-items-center">
+                                                <a href="{{ url_for('doctor.view_uploaded_report', filename=upload.file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary py-0.5 px-2 rounded-pill" style="font-size: 0.72rem;" title="View Report PDF">
+                                                    <i class="bi bi-eye me-1"></i>View
+                                                </a>
+                                                {% if upload.verification_status != 'verified' %}
+                                                    <button type="button" class="btn btn-sm btn-success py-0.5 px-2 rounded-pill text-white" style="font-size: 0.72rem;" data-bs-toggle="modal" data-bs-target="#modalReviewReport_{{ upload.id }}" title="Review and Verify Report">
+                                                        <i class="bi bi-check-circle me-1"></i>Review
+                                                    </button>
+                                                {% else %}
+                                                    <span class="badge bg-success text-white py-1 px-2 rounded-pill" style="font-size: 0.65rem;">Signed Off</span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    <!-- Modal for Doctor Review & Verification of Report -->
+                                    <div class="modal fade text-start" id="modalReviewReport_{{ upload.id }}" tabindex="-1" aria-labelledby="modalLabel_{{ upload.id }}" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content rounded-4 border-0 shadow">
+                                                <div class="modal-header bg-primary text-white py-3 px-4 rounded-top-4">
+                                                    <h6 class="modal-title fw-bold" id="modalLabel_{{ upload.id }}">
+                                                        <i class="bi bi-clipboard-check me-2"></i>Review Official Laboratory Report
+                                                    </h6>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body p-4">
+                                                    <div class="p-3 bg-light rounded-3 mb-3">
+                                                        <div class="row g-2 small">
+                                                            <div class="col-6">
+                                                                <span class="text-muted">Patient:</span>
+                                                                <div class="fw-bold text-dark">{{ upload.patient_first_name }} {{ upload.patient_last_name }}</div>
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <span class="text-muted">Diagnostic Source:</span>
+                                                                <div class="fw-bold text-dark">{{ upload.display_lab_name }}</div>
+                                                            </div>
+                                                            <div class="col-12 mt-2">
+                                                                <span class="text-muted">Required Investigation:</span>
+                                                                <div class="fw-bold text-primary">{{ upload.task_name }}</div>
+                                                            </div>
+                                                            <div class="col-12 mt-2 pt-2 border-top">
+                                                                <span class="text-muted">Report Document:</span>
+                                                                <div class="d-flex align-items-center justify-content-between mt-1">
+                                                                    <span class="fw-semibold text-dark text-truncate" style="max-width: 260px;" title="{{ upload.file_name }}">{{ upload.file_name }}</span>
+                                                                    <a href="{{ url_for('doctor.view_uploaded_report', filename=upload.file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary py-0.5 px-2.5 rounded-pill">
+                                                                        <i class="bi bi-box-arrow-up-right me-1"></i>Open PDF
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Verify Form -->
+                                                    <form action="{{ url_for('doctor.verify_report', report_id=upload.id) }}" method="POST" class="mb-3">
+                                                        <div class="mb-3">
+                                                            <label class="form-label small fw-bold text-dark">Attending Doctor Notes (Optional):</label>
+                                                            <input type="text" name="verification_notes" class="form-control form-control-sm" placeholder="e.g. Findings reviewed and cleared for scheduled procedure.">
+                                                        </div>
+                                                        <button type="submit" class="btn btn-success w-100 rounded-pill py-2 fw-semibold">
+                                                            <i class="bi bi-check-circle-fill me-1"></i>Verify & Approve Report
+                                                        </button>
+                                                    </form>
+
+                                                    <!-- Needs Clarification Section -->
+                                                    <div class="border-top pt-3 text-center">
+                                                        <button type="button" class="btn btn-sm btn-link text-danger text-decoration-none p-0" data-bs-toggle="collapse" data-bs-target="#collapseClarification_{{ upload.id }}">
+                                                            <i class="bi bi-exclamation-triangle me-1"></i>Need revision or clarification from lab?
+                                                        </button>
+                                                        <div class="collapse mt-2 text-start" id="collapseClarification_{{ upload.id }}">
+                                                            <form action="{{ url_for('doctor.reject_report', report_id=upload.id) }}" method="POST" class="p-3 bg-danger-subtle rounded-3 border border-danger-subtle">
+                                                                <label class="form-label small fw-bold text-danger">Clarification Reason (Required):</label>
+                                                                <textarea name="rejection_reason" class="form-control form-control-sm mb-2" rows="2" placeholder="Specify required clarification from laboratory..." required></textarea>
+                                                                <button type="submit" class="btn btn-sm btn-danger w-100 rounded-pill">
+                                                                    Submit Clarification Request
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctxReady = document.getElementById('readinessChart').getContext('2d');
+    new Chart(ctxReady, {
+        type: 'doughnut',
+        data: {
+            labels: ['Ready (Green)', 'Warning (Yellow)', 'Verification Pending (Orange)', 'Not Ready (Red)'],
+            datasets: [{
+                data: [
+                    {{ readiness_distribution.green }},
+                    {{ readiness_distribution.yellow }},
+                    {{ readiness_distribution.orange }},
+                    {{ readiness_distribution.red }}
+                ],
+                backgroundColor: ['#0f766e', '#d97706', '#d9480f', '#be123c'],
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { boxWidth: 10, padding: 10, font: { size: 10, family: "'Plus Jakarta Sans', sans-serif" } }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
